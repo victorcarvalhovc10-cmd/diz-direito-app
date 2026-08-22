@@ -46,62 +46,41 @@
     position: relative;
   }
   .mascot-track{
-    width: 180px; height: 130px; position: relative;
+    width: 170px; height: 165px; position: relative;
   }
-  .pug-group{
-    position:absolute; bottom:0; left:0;
-    animation: pace 6s ease-in-out infinite;
+  .pug-face{
+    position:absolute; bottom:0; left:50%; transform:translateX(-50%);
   }
-  @keyframes pace{
-    0%   { transform: translateX(0) scaleX(1); }
-    45%  { transform: translateX(60px) scaleX(1); }
-    50%  { transform: translateX(60px) scaleX(-1); }
-    95%  { transform: translateX(0) scaleX(-1); }
-    100% { transform: translateX(0) scaleX(1); }
+  .pug-eye{
+    animation: blink 4.5s ease-in-out infinite;
+    transform-origin: center;
   }
-  .pug-body{
-    animation: bob 0.45s ease-in-out infinite;
-    transform-origin: center bottom;
-  }
-  @keyframes bob{
-    0%,100%{ transform: translateY(0) rotate(0deg); }
-    50%{ transform: translateY(-3px) rotate(-1deg); }
-  }
-  .pug-leg-a{ animation: legswing 0.45s ease-in-out infinite; transform-origin: top center; }
-  .pug-leg-b{ animation: legswing 0.45s ease-in-out infinite reverse; transform-origin: top center; }
-  @keyframes legswing{
-    0%,100%{ transform: rotate(18deg); }
-    50%{ transform: rotate(-18deg); }
-  }
-  .pug-tail{
-    animation: wag 0.35s ease-in-out infinite;
-    transform-origin: bottom center;
-  }
-  @keyframes wag{
-    0%,100%{ transform: rotate(-12deg); }
-    50%{ transform: rotate(18deg); }
+  .pug-eye.eye-b{ animation-delay: 0.05s; }
+  @keyframes blink{
+    0%, 92%, 100%{ transform: scaleY(1); }
+    95%{ transform: scaleY(0.1); }
   }
   .idea-bulb{
-    position:absolute; top:-34px; left:50%; transform:translateX(-50%);
-    opacity:0; animation: idea-cycle 6s ease-in-out infinite;
+    position:absolute; top:-6px; left:50%; transform:translateX(-50%);
+    opacity:0; animation: idea-cycle 7s ease-in-out infinite;
   }
   @keyframes idea-cycle{
     0%, 8%{ opacity:0; transform:translateX(-50%) translateY(4px) scale(0.8); }
-    18%, 38%{ opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
-    48%, 100%{ opacity:0; transform:translateX(-50%) translateY(4px) scale(0.8); }
+    18%, 42%{ opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+    52%, 100%{ opacity:0; transform:translateX(-50%) translateY(4px) scale(0.8); }
   }
   .thought-bubble{
-    position:absolute; top:-34px; left:50%; transform:translateX(20px);
-    opacity:0; animation: thought-cycle 6s ease-in-out infinite;
+    position:absolute; top:-2px; left:50%; transform:translateX(38px);
+    opacity:0; animation: thought-cycle 7s ease-in-out infinite;
     background: var(--panel); border:1px solid var(--panel-border);
     border-radius: 10px; padding:6px 10px; white-space:nowrap;
     font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft);
     backdrop-filter: blur(8px);
   }
   @keyframes thought-cycle{
-    0%, 50%{ opacity:0; transform:translateX(20px) translateY(4px); }
-    60%, 88%{ opacity:1; transform:translateX(20px) translateY(0); }
-    96%, 100%{ opacity:0; transform:translateX(20px) translateY(4px); }
+    0%, 55%{ opacity:0; transform:translateX(38px) translateY(4px); }
+    65%, 90%{ opacity:1; transform:translateX(38px) translateY(0); }
+    98%, 100%{ opacity:0; transform:translateX(38px) translateY(4px); }
   }
 
   .app{ width:100%; max-width: 560px; }
@@ -111,7 +90,7 @@
     font-family:'Space Grotesk', sans-serif;
     font-weight:600; font-size:15px;
     color: var(--ink-soft);
-    margin-bottom: 34px;
+    margin-bottom: 42px;
   }
   .brand .logo{ display:flex; align-items:center; gap:10px; }
   .brand .dot{ width:8px; height:8px; border-radius:50%; background: var(--grad); box-shadow: 0 0 12px var(--violet); }
@@ -353,7 +332,7 @@
 <body>
 <div class="app">
   <div class="brand">
-    <div class="logo"><img src="/logo.svg" alt="Diz Direito" style="height:32px;width:auto;"></div>
+    <div class="logo"><img src="/logo.svg" alt="Diz Direito" style="height:64px;width:auto;"></div>
     <button class="hist-btn" id="histBtn">🕘 Histórico <span class="badge" id="histBadge" style="display:none;">0</span></button>
   </div>
   <div class="trail" id="trail"></div>
@@ -478,34 +457,47 @@ function renderStart(){
           </svg>
         </div>
         <div class="thought-bubble" id="pugThought">Vamos criar algo incrível!</div>
-        <div class="pug-group">
-          <svg class="pug-body" width="120" height="100" viewBox="0 0 120 100" fill="none">
-            <!-- tail -->
-            <path class="pug-tail" d="M96 58c8-4 14 2 12 9-2 6-10 5-11-1" stroke="#C99A6B" stroke-width="7" stroke-linecap="round" fill="none"/>
-            <!-- back leg -->
-            <rect class="pug-leg-b" x="76" y="62" width="11" height="22" rx="5" fill="#C99A6B"/>
-            <!-- front leg -->
-            <rect class="pug-leg-a" x="32" y="62" width="11" height="22" rx="5" fill="#D9AE7C"/>
-            <!-- body -->
-            <ellipse cx="62" cy="55" rx="34" ry="24" fill="#D9AE7C"/>
-            <!-- head -->
-            <circle cx="30" cy="40" r="22" fill="#E4BD8C"/>
+        <div class="pug-face">
+          <svg width="150" height="140" viewBox="0 0 150 140" fill="none">
+            <defs>
+              <radialGradient id="faceShade" cx="42%" cy="35%" r="70%">
+                <stop offset="0%" stop-color="#F0D2A6"/>
+                <stop offset="100%" stop-color="#DCB284"/>
+              </radialGradient>
+            </defs>
             <!-- ears -->
-            <path d="M14 24c-6-2-11 2-10 8 1 5 7 6 10 3z" fill="#7A4A2B"/>
-            <path d="M40 22c6-3 12 1 11 7-1 5-7 7-11 3z" fill="#7A4A2B"/>
-            <!-- wrinkle -->
-            <path d="M20 32c4-3 12-3 16 0" stroke="#B98E5E" stroke-width="2" stroke-linecap="round" fill="none"/>
+            <path d="M28 34c-14-9-30-3-31 12-1 13 12 22 26 18z" fill="#6B4128"/>
+            <path d="M31 38c-9-5-20-1-21 9-1 9 8 15 18 13z" fill="#83533A"/>
+            <path d="M118 32c14-8 30-1 30 14 0 13-13 21-27 16z" fill="#6B4128"/>
+            <path d="M115 37c9-6 20-3 21 7 1 9-7 15-17 14z" fill="#83533A"/>
+            <!-- head -->
+            <ellipse cx="75" cy="72" rx="55" ry="50" fill="url(#faceShade)"/>
+            <!-- forehead wrinkles -->
+            <path d="M46 42c10-7 20-9 29-9s19 2 29 9" stroke="#C79A68" stroke-width="2.4" stroke-linecap="round" fill="none" opacity="0.7"/>
+            <path d="M40 54c12-6 23-8 35-8s23 2 35 8" stroke="#C79A68" stroke-width="2.2" stroke-linecap="round" fill="none" opacity="0.55"/>
+            <!-- cheeks shading -->
+            <ellipse cx="38" cy="82" rx="14" ry="10" fill="#CFA271" opacity="0.35"/>
+            <ellipse cx="112" cy="82" rx="14" ry="10" fill="#CFA271" opacity="0.35"/>
             <!-- muzzle -->
-            <ellipse cx="21" cy="46" rx="11" ry="8" fill="#3B2A20"/>
-            <ellipse cx="21" cy="43" rx="9" ry="6" fill="#54392A"/>
-            <circle cx="17" cy="41" r="1.6" fill="#1A120C"/>
-            <circle cx="25" cy="41" r="1.6" fill="#1A120C"/>
-            <path d="M21 46v3" stroke="#1A120C" stroke-width="1.4" stroke-linecap="round"/>
-            <!-- eyes -->
-            <circle cx="24" cy="32" r="3.2" fill="#1A120C"/>
-            <circle cx="38" cy="32" r="3.2" fill="#1A120C"/>
-            <circle cx="25" cy="31" r="0.9" fill="#fff"/>
-            <circle cx="39" cy="31" r="0.9" fill="#fff"/>
+            <ellipse cx="75" cy="98" rx="30" ry="22" fill="#EAC896"/>
+            <ellipse cx="75" cy="100" rx="24" ry="16" fill="#3B2A20"/>
+            <ellipse cx="75" cy="96" rx="20" ry="12" fill="#54392A"/>
+            <!-- nose -->
+            <ellipse cx="75" cy="92" rx="10" ry="7" fill="#1A120C"/>
+            <ellipse cx="72" cy="89" rx="2.6" ry="1.6" fill="#5A5048"/>
+            <path d="M75 98v6" stroke="#1A120C" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M75 104c-5 4-11 4-16 1M75 104c5 4 11 4 16 1" stroke="#1A120C" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+            <!-- eyes (blink) -->
+            <g class="pug-eye eye-a">
+              <ellipse cx="52" cy="66" rx="8" ry="9" fill="#1A120C"/>
+              <circle cx="55" cy="62" r="2.4" fill="#fff"/>
+            </g>
+            <g class="pug-eye eye-b">
+              <ellipse cx="98" cy="66" rx="8" ry="9" fill="#1A120C"/>
+              <circle cx="101" cy="62" r="2.4" fill="#fff"/>
+            </g>
+            <!-- brow wrinkle above eyes -->
+            <path d="M42 56c5-4 12-5 16-2M92 54c4-3 11-2 16 2" stroke="#B98E5E" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.6"/>
           </svg>
         </div>
       </div>
