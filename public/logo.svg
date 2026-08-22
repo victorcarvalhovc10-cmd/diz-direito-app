@@ -1,0 +1,24 @@
+<svg viewBox="0 0 640 160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgWord" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="640" height="160" fill="#0A0B14"/>
+
+  <!-- symbol -->
+  <g transform="translate(28,24) scale(0.28)">
+    <path d="M40 88c0-27 22-49 49-49h222c27 0 49 22 49 49v138c0 27-22 49-49 49H167l-72 63v-63H89c-27 0-49-22-49-49V88z"
+          fill="url(#bgWord)"/>
+    <path d="M108 168l80-55v33h85v44h-85v33z" fill="#0A0B14"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="140" y="72" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="40" fill="#EDEBF7">Diz</text>
+  <text x="140" y="112" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="40" fill="url(#bgWord)">Direito</text>
+
+  <!-- tagline -->
+  <text x="330" y="95" font-family="'JetBrains Mono', monospace" font-size="13" letter-spacing="1" fill="#9491AD">seu pedido, na direção certa</text>
+</svg>

@@ -8,6 +8,7 @@
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#0A0B14">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -38,6 +39,69 @@
     display:flex;
     justify-content:center;
     padding: 40px 18px 80px;
+  }
+
+  .mascot-wrap{
+    display:flex; justify-content:center; margin: 6px 0 28px;
+    position: relative;
+  }
+  .mascot-track{
+    width: 180px; height: 130px; position: relative;
+  }
+  .pug-group{
+    position:absolute; bottom:0; left:0;
+    animation: pace 6s ease-in-out infinite;
+  }
+  @keyframes pace{
+    0%   { transform: translateX(0) scaleX(1); }
+    45%  { transform: translateX(60px) scaleX(1); }
+    50%  { transform: translateX(60px) scaleX(-1); }
+    95%  { transform: translateX(0) scaleX(-1); }
+    100% { transform: translateX(0) scaleX(1); }
+  }
+  .pug-body{
+    animation: bob 0.45s ease-in-out infinite;
+    transform-origin: center bottom;
+  }
+  @keyframes bob{
+    0%,100%{ transform: translateY(0) rotate(0deg); }
+    50%{ transform: translateY(-3px) rotate(-1deg); }
+  }
+  .pug-leg-a{ animation: legswing 0.45s ease-in-out infinite; transform-origin: top center; }
+  .pug-leg-b{ animation: legswing 0.45s ease-in-out infinite reverse; transform-origin: top center; }
+  @keyframes legswing{
+    0%,100%{ transform: rotate(18deg); }
+    50%{ transform: rotate(-18deg); }
+  }
+  .pug-tail{
+    animation: wag 0.35s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+  @keyframes wag{
+    0%,100%{ transform: rotate(-12deg); }
+    50%{ transform: rotate(18deg); }
+  }
+  .idea-bulb{
+    position:absolute; top:-34px; left:50%; transform:translateX(-50%);
+    opacity:0; animation: idea-cycle 6s ease-in-out infinite;
+  }
+  @keyframes idea-cycle{
+    0%, 8%{ opacity:0; transform:translateX(-50%) translateY(4px) scale(0.8); }
+    18%, 38%{ opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+    48%, 100%{ opacity:0; transform:translateX(-50%) translateY(4px) scale(0.8); }
+  }
+  .thought-bubble{
+    position:absolute; top:-34px; left:50%; transform:translateX(20px);
+    opacity:0; animation: thought-cycle 6s ease-in-out infinite;
+    background: var(--panel); border:1px solid var(--panel-border);
+    border-radius: 10px; padding:6px 10px; white-space:nowrap;
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft);
+    backdrop-filter: blur(8px);
+  }
+  @keyframes thought-cycle{
+    0%, 50%{ opacity:0; transform:translateX(20px) translateY(4px); }
+    60%, 88%{ opacity:1; transform:translateX(20px) translateY(0); }
+    96%, 100%{ opacity:0; transform:translateX(20px) translateY(4px); }
   }
 
   .app{ width:100%; max-width: 560px; }
@@ -195,6 +259,18 @@
   .error.show{ display:block; }
 
   /* result screen */
+  .quick-action{
+    background: linear-gradient(120deg, var(--cyan), var(--violet));
+  }
+
+  .executed-section{
+    margin-bottom: 16px;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--violet);
+    background: linear-gradient(120deg, rgba(139,92,246,0.08), rgba(34,211,238,0.05));
+  }
+
   .result-badge{
     align-self:flex-start;
     font-family:'JetBrains Mono', monospace; font-size:11.5px;
@@ -277,7 +353,7 @@
 <body>
 <div class="app">
   <div class="brand">
-    <div class="logo"><span class="dot"></span> DIZ DIRETO</div>
+    <div class="logo"><img src="/logo.svg" alt="Diz Direito" style="height:32px;width:auto;"></div>
     <button class="hist-btn" id="histBtn">🕘 Histórico <span class="badge" id="histBadge" style="display:none;">0</span></button>
   </div>
   <div class="trail" id="trail"></div>
@@ -286,7 +362,7 @@
 </div>
 
 <script>
-const state = { screen: 'start', projectInput: '', projectType: '', questions: [], stepIndex: 0, answers: {}, finalPrompt: '', requiresAttachment: false, attachmentLabel: '', attachmentBase64: '', attachmentMime: '', attachmentName: '', history: [] };
+const state = { screen: 'start', projectInput: '', projectType: '', outputType: 'texto', questions: [], stepIndex: 0, answers: {}, finalPrompt: '', requiresAttachment: false, attachmentLabel: '', attachmentBase64: '', attachmentMime: '', attachmentName: '', history: [], executedResult: '', executedImageUrl: '' };
 
 const cardEl = document.getElementById('card');
 const trailEl = document.getElementById('trail');
@@ -330,6 +406,9 @@ function renderHistory(){
       const h = state.history[+el.dataset.idx];
       state.projectType = h.projectType;
       state.finalPrompt = h.prompt;
+      state.outputType = h.outputType || 'texto';
+      state.executedResult = h.executedResult || '';
+      state.executedImageUrl = h.executedImageUrl || '';
       state.attachmentBase64 = h.hadAttachment ? state.attachmentBase64 : '';
       state.projectInput = h.projectInput;
       renderResult();
@@ -388,6 +467,49 @@ function renderStart(){
   state.screen = 'start';
   renderTrail();
   cardEl.innerHTML = `
+    <div class="mascot-wrap">
+      <div class="mascot-track">
+        <div class="idea-bulb">
+          <svg width="26" height="34" viewBox="0 0 26 34" fill="none">
+            <circle cx="13" cy="13" r="11" fill="#FCD34D"/>
+            <rect x="9" y="23" width="8" height="5" rx="1.5" fill="#9491AD"/>
+            <rect x="10" y="29" width="6" height="3" rx="1" fill="#6B6885"/>
+            <path d="M13 6v5M9 9l2 2M17 9l-2 2" stroke="#B45309" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="thought-bubble" id="pugThought">Vamos criar algo incrível!</div>
+        <div class="pug-group">
+          <svg class="pug-body" width="120" height="100" viewBox="0 0 120 100" fill="none">
+            <!-- tail -->
+            <path class="pug-tail" d="M96 58c8-4 14 2 12 9-2 6-10 5-11-1" stroke="#C99A6B" stroke-width="7" stroke-linecap="round" fill="none"/>
+            <!-- back leg -->
+            <rect class="pug-leg-b" x="76" y="62" width="11" height="22" rx="5" fill="#C99A6B"/>
+            <!-- front leg -->
+            <rect class="pug-leg-a" x="32" y="62" width="11" height="22" rx="5" fill="#D9AE7C"/>
+            <!-- body -->
+            <ellipse cx="62" cy="55" rx="34" ry="24" fill="#D9AE7C"/>
+            <!-- head -->
+            <circle cx="30" cy="40" r="22" fill="#E4BD8C"/>
+            <!-- ears -->
+            <path d="M14 24c-6-2-11 2-10 8 1 5 7 6 10 3z" fill="#7A4A2B"/>
+            <path d="M40 22c6-3 12 1 11 7-1 5-7 7-11 3z" fill="#7A4A2B"/>
+            <!-- wrinkle -->
+            <path d="M20 32c4-3 12-3 16 0" stroke="#B98E5E" stroke-width="2" stroke-linecap="round" fill="none"/>
+            <!-- muzzle -->
+            <ellipse cx="21" cy="46" rx="11" ry="8" fill="#3B2A20"/>
+            <ellipse cx="21" cy="43" rx="9" ry="6" fill="#54392A"/>
+            <circle cx="17" cy="41" r="1.6" fill="#1A120C"/>
+            <circle cx="25" cy="41" r="1.6" fill="#1A120C"/>
+            <path d="M21 46v3" stroke="#1A120C" stroke-width="1.4" stroke-linecap="round"/>
+            <!-- eyes -->
+            <circle cx="24" cy="32" r="3.2" fill="#1A120C"/>
+            <circle cx="38" cy="32" r="3.2" fill="#1A120C"/>
+            <circle cx="25" cy="31" r="0.9" fill="#fff"/>
+            <circle cx="39" cy="31" r="0.9" fill="#fff"/>
+          </svg>
+        </div>
+      </div>
+    </div>
     <div class="kicker">passo 1 — o que você quer criar</div>
     <h1>Me conta o que <span>você precisa</span>.</h1>
     <p class="hint">Pode ser qualquer coisa: uma foto pro Instagram, um anúncio, um código, um texto de venda, um vídeo. A gente descobre o resto juntos.</p>
@@ -399,6 +521,16 @@ function renderStart(){
     </div>
   `;
   document.getElementById('startBtn').addEventListener('click', startFlow);
+
+  const pugPhrases = ['Vamos criar algo incrível!', 'Conta sua ideia...', 'Toda ideia começa simples', 'Tô aqui pra ajudar!'];
+  let pugPhraseIndex = 0;
+  const thoughtEl = document.getElementById('pugThought');
+  if(thoughtEl){
+    setInterval(()=>{
+      pugPhraseIndex = (pugPhraseIndex + 1) % pugPhrases.length;
+      thoughtEl.textContent = pugPhrases[pugPhraseIndex];
+    }, 6000);
+  }
 }
 
 async function startFlow(){
@@ -415,6 +547,7 @@ async function startFlow(){
     state.projectType = json.project_type || 'projeto';
     state.questions = json.questions || [];
     state.requiresAttachment = !!json.requires_attachment;
+    state.outputType = json.output_type === 'imagem' ? 'imagem' : 'texto';
     state.attachmentLabel = json.attachment_label || 'Anexe um arquivo de referência';
     state.attachmentBase64 = ''; state.attachmentMime = ''; state.attachmentName = '';
     state.stepIndex = 0;
@@ -561,19 +694,48 @@ async function generateFinal(){
     });
     const text = json.finalPrompt;
     state.finalPrompt = text;
-    state.history.unshift({
-      projectType: state.projectType,
-      projectInput: state.projectInput,
-      prompt: text,
-      hadAttachment: !!state.attachmentBase64,
-      time: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
-    });
-    if(state.history.length > 10) state.history.pop();
-    updateHistBadge();
-    renderResult();
+    await executeResult();
   }catch(e){
     btn.disabled = false; btn.classList.remove('loading');
   }
+}
+
+function getQuickAction(){
+  const text = (state.projectType + ' ' + state.projectInput).toLowerCase();
+  const has = (...words) => words.some(w => text.includes(w));
+
+  if(has('linkedin')){
+    return { type:'link', icon:'💼', label:'Abrir LinkedIn e atualizar sua foto', url:'https://www.linkedin.com/in/me/' };
+  }
+  if(has('instagram', 'reels', 'stories', 'story', 'reel')){
+    return { type:'link', icon:'📸', label:'Abrir Instagram para postar', url:'https://www.instagram.com/' };
+  }
+  if(has('currículo', 'curriculo', 'resume', ' cv ', 'cv,')){
+    return { type:'download-pdf', icon:'📄', label:'Baixar currículo em PDF' };
+  }
+  return null;
+}
+
+function downloadTextAsPDF(text, filename){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  const margin = 48;
+  const maxWidth = 500;
+  const lineHeight = 15;
+  const pageBottom = 780;
+  doc.setFont('Helvetica', 'normal');
+  doc.setFontSize(11);
+  let y = margin;
+  const paragraphs = text.split('\n');
+  paragraphs.forEach(paragraph=>{
+    const lines = doc.splitTextToSize(paragraph || ' ', maxWidth);
+    lines.forEach(line=>{
+      if(y > pageBottom){ doc.addPage(); y = margin; }
+      doc.text(line, margin, y);
+      y += lineHeight;
+    });
+  });
+  doc.save(filename);
 }
 
 function suggestDestinations(){
@@ -632,18 +794,73 @@ async function copyText(text){
   }
 }
 
+async function executeResult(){
+  state.executedResult = '';
+  state.executedImageUrl = '';
+  try{
+    if(state.outputType === 'imagem'){
+      const encoded = encodeURIComponent(state.finalPrompt.slice(0, 800));
+      state.executedImageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+    }else{
+      const json = await apiPost('/api/execute-text', { finalPrompt: state.finalPrompt });
+      state.executedResult = json.result;
+    }
+  }catch(e){
+    // se falhar, o app ainda mostra o prompt normalmente como plano B
+  }
+  state.history.unshift({
+    projectType: state.projectType,
+    projectInput: state.projectInput,
+    prompt: state.finalPrompt,
+    outputType: state.outputType,
+    executedResult: state.executedResult,
+    executedImageUrl: state.executedImageUrl,
+    hadAttachment: !!state.attachmentBase64,
+    time: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
+  });
+  if(state.history.length > 10) state.history.pop();
+  updateHistBadge();
+  renderResult();
+}
+
 function renderResult(){
   state.screen = 'result';
   renderTrail();
+
+  const hasExecuted = !!(state.executedResult || state.executedImageUrl);
+  const quickAction = getQuickAction();
+  const quickActionHtml = quickAction ? `
+    <div class="result-actions">
+      <button class="next quick-action" id="quickActionBtn">${quickAction.icon} ${esc(quickAction.label)}</button>
+    </div>
+  ` : '';
+
   cardEl.innerHTML = `
     <div class="result-badge">🎉 projeto concluído</div>
     <h1>Seu prompt tá <span>pronto</span>.</h1>
-    <p class="hint">Copia e cola direto na IA que você usa. Os campos em destaque são pra você personalizar.</p>
+    <p class="hint">Copia e cola direto na IA que você usa, ou veja o resultado que o próprio Diz Direito já gerou pra você. Os campos em destaque são pra você personalizar.</p>
+
+    <div class="executed-section" id="executedSection" style="display:none;">
+      <div class="result-label">resultado diz direito</div>
+      ${state.outputType === 'imagem'
+        ? (state.executedImageUrl
+            ? `<img src="${state.executedImageUrl}" alt="Resultado gerado" style="width:100%;border-radius:12px;border:1px solid var(--panel-border);">`
+            : '<div class="note">Não consegui gerar a imagem agora — tenta de novo em alguns segundos.</div>')
+        : (state.executedResult
+            ? `<div class="output" id="executedText">${esc(state.executedResult)}</div>`
+            : '<div class="note">Não consegui gerar o resultado agora — o prompt abaixo ainda funciona se você colar em outra IA.</div>')
+      }
+    </div>
+
     <div class="output" id="outputText" contenteditable="true" spellcheck="false"></div>
     <div class="edit-hint">💡 clique no texto acima pra editar os campos destacados antes de copiar</div>
-    ${state.attachmentBase64 ? '<div class="note">📎 A IA analisou sua foto pra deixar esse prompt específico pra ela. Cole esse prompt numa ferramenta de geração/edição de imagem (Midjourney, Ideogram etc) pra ver o resultado final — gerar a imagem direto aqui no app exigiria conectar um serviço de geração de imagem.</div>' : ''}
+    ${state.attachmentBase64 ? '<div class="note">📎 A IA analisou sua foto pra deixar esse prompt específico pra ela.</div>' : ''}
     <div class="result-actions">
-      <button class="next" id="copyBtn">Copiar prompt</button>
+      <button class="next" id="resultBtn">✨ Resultado Diz Direto</button>
+    </div>
+    ${quickActionHtml}
+    <div class="result-actions">
+      <button class="ghost" id="copyBtn">Copiar prompt</button>
       <button class="ghost" id="restartBtn">Criar outro projeto</button>
     </div>
     <div class="destinations">
@@ -662,6 +879,31 @@ function renderResult(){
     </div>
   `;
   document.getElementById('outputText').innerHTML = highlightVars(state.finalPrompt);
+
+  const executedSection = document.getElementById('executedSection');
+  const resultBtn = document.getElementById('resultBtn');
+  resultBtn.addEventListener('click', ()=>{
+    const showing = executedSection.style.display !== 'none';
+    executedSection.style.display = showing ? 'none' : 'block';
+    resultBtn.innerHTML = showing ? '✨ Resultado Diz Direto' : '✨ Ocultar resultado';
+    if(!showing) executedSection.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  });
+  if(!hasExecuted){
+    resultBtn.disabled = true;
+    resultBtn.title = 'Resultado indisponível dessa vez';
+  }
+
+  if(quickAction){
+    document.getElementById('quickActionBtn').addEventListener('click', ()=>{
+      if(quickAction.type === 'link'){
+        window.open(quickAction.url, '_blank', 'noopener');
+      }else if(quickAction.type === 'download-pdf'){
+        const content = state.executedResult || state.finalPrompt;
+        downloadTextAsPDF(content, 'curriculo-diz-direito.pdf');
+      }
+    });
+  }
+
   document.getElementById('copyBtn').addEventListener('click', async ()=>{
     const outputEl = document.getElementById('outputText');
     const liveText = outputEl.innerText;
@@ -669,7 +911,7 @@ function renderResult(){
     const ok = await copyText(liveText);
     if(ok){
       b.innerHTML = '<span>Copiado! ✓</span>';
-      setTimeout(()=>{ b.innerHTML = '<span>Copiar prompt</span>'; }, 1600);
+      setTimeout(()=>{ b.innerHTML = 'Copiar prompt'; }, 1600);
     }else{
       b.innerHTML = '<span>Selecionado — use Ctrl+C</span>';
       const range = document.createRange();
@@ -677,7 +919,7 @@ function renderResult(){
       const sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(range);
-      setTimeout(()=>{ b.innerHTML = '<span>Copiar prompt</span>'; }, 2600);
+      setTimeout(()=>{ b.innerHTML = 'Copiar prompt'; }, 2600);
     }
   });
   document.getElementById('restartBtn').addEventListener('click', renderStart);

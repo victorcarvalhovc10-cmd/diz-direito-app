@@ -83,8 +83,9 @@ app.post('/api/questions', async (req, res) => {
     const { projectInput } = req.body;
     const system = `Você decompõe pedidos de criação em perguntas interativas para montar o prompt de IA perfeito depois. Dado o pedido do usuário, gere SEMPRE NO MÍNIMO 3 e no máximo 4 perguntas ESPECÍFICAS para esse tipo de projeto (não genéricas — se for uma foto, pergunte sobre estética/composição/luz; se for um texto de venda, pergunte sobre público/tom/gatilho; adapte sempre ao pedido). Nunca gere menos de 3 perguntas: se o pedido for muito simples e você não encontrar 3 perguntas específicas o suficiente, complete com perguntas relevantes mas um pouco mais gerais (ex: tom desejado, formato de saída, nível de detalhe) até atingir o mínimo de 3. Para cada pergunta, gere de 4 a 6 opções curtas (2-4 palavras), específicas ao contexto, cada uma com um emoji representativo.
 Além disso, avalie se esse tipo de projeto normalmente exige que o usuário anexe algum arquivo de referência (uma foto para editar/estilizar, um documento para basear um texto, uma imagem de produto, um logo, etc). Se exigir, marque "requires_attachment": true e escreva um "attachment_label" curto pedindo o anexo certo. Se não fizer sentido pedir anexo, marque "requires_attachment": false.
+Por fim, classifique o "output_type" do projeto como "imagem" (quando o resultado final é uma imagem/foto/ilustração/design) ou "texto" (quando o resultado final é texto, código, roteiro, etc).
 Responda APENAS com JSON válido neste formato exato, sem markdown, sem texto fora do JSON:
-{"project_type": "nome curto do tipo de projeto", "requires_attachment": true, "attachment_label": "frase curta pedindo o anexo", "questions": [{"id": "slug_curto", "label": "pergunta", "options": [{"label": "opção", "icon": "emoji"}]}]}`;
+{"project_type": "nome curto do tipo de projeto", "output_type": "imagem", "requires_attachment": true, "attachment_label": "frase curta pedindo o anexo", "questions": [{"id": "slug_curto", "label": "pergunta", "options": [{"label": "opção", "icon": "emoji"}]}]}`;
 
     const raw = await callClaude({ system, content: projectInput });
     const clean = raw.replace(/```json|```/g, '').trim();
@@ -121,6 +122,21 @@ Responda APENAS com o prompt final, texto puro, sem explicações, sem markdown,
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'erro_interno', message: 'Não consegui gerar o prompt final. Tenta de novo.' });
+  }
+});
+
+app.post('/api/execute-text', async (req, res) => {
+  try {
+    const { finalPrompt } = req.body;
+    const result = await callClaude({
+      system: 'Responda ao pedido abaixo da melhor forma possível, com qualidade profissional, pronto para uso.',
+      content: finalPrompt,
+      maxTokens: 2000
+    });
+    res.json({ result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'erro_interno', message: 'Não consegui gerar o resultado. Tenta de novo.' });
   }
 });
 
