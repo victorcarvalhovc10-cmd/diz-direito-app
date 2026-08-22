@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diz Direito — assistente de projetos com IA</title>
+<link rel="icon" type="image/png" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0A0B14">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root{
+    --bg: #0A0B14;
+    --bg2: #10121F;
+    --panel: rgba(255,255,255,0.045);
+    --panel-border: rgba(255,255,255,0.09);
+    --ink: #EDEBF7;
+    --ink-soft: #9491AD;
+    --violet: #8B5CF6;
+    --cyan: #22D3EE;
+    --pink: #F472B6;
+    --grad: linear-gradient(120deg, var(--violet), var(--cyan));
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(139,92,246,0.16), transparent 45%),
+      radial-gradient(circle at 85% 20%, rgba(34,211,238,0.12), transparent 40%),
+      var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    display:flex;
+    justify-content:center;
+    padding: 40px 18px 80px;
+  }
+
+  .app{ width:100%; max-width: 560px; }
+
+  .brand{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600; font-size:15px;
+    color: var(--ink-soft);
+    margin-bottom: 34px;
+  }
+  .brand .logo{ display:flex; align-items:center; gap:10px; }
+  .brand .dot{ width:8px; height:8px; border-radius:50%; background: var(--grad); box-shadow: 0 0 12px var(--violet); }
+  .hist-btn{
+    font-family:'JetBrains Mono', monospace; font-size:12px;
+    background: none; border: 1px solid var(--panel-border); color: var(--ink-soft);
+    padding: 7px 12px; border-radius: 100px; cursor:pointer;
+    display:flex; align-items:center; gap:6px;
+  }
+  .hist-btn:hover{ border-color: var(--violet); color: var(--ink); }
+  .hist-btn .badge{
+    background: var(--grad); color:#0A0B14; font-size:10.5px; font-weight:700;
+    border-radius:100px; padding:1px 6px;
+  }
+
+  .hist-item{
+    padding: 14px; border-radius: 12px; border: 1px solid var(--panel-border);
+    background: rgba(255,255,255,0.025); margin-bottom:10px; cursor:pointer;
+    transition: all .15s ease;
+  }
+  .hist-item:hover{ border-color: var(--violet); }
+  .hist-item .htype{ font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:14px; margin-bottom:4px; }
+  .hist-item .hpreview{ font-size:12.5px; color: var(--ink-soft); overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .hist-item .htime{ font-family:'JetBrains Mono', monospace; font-size:10.5px; color:#5F5C77; margin-top:6px; }
+  .hist-empty{ color: var(--ink-soft); font-size:14px; text-align:center; padding: 40px 10px; }
+
+  /* progress trail */
+  .trail{
+    display:flex; align-items:center; gap:6px;
+    margin-bottom: 30px;
+  }
+  .trail .seg{
+    flex:1; height:4px; border-radius:4px;
+    background: rgba(255,255,255,0.08);
+    overflow:hidden;
+  }
+  .trail .seg .fill{
+    height:100%; width:0%; background: var(--grad);
+    transition: width .5s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 0 8px var(--violet);
+  }
+  .trail .seg.done .fill{ width:100%; }
+  .trail .seg.current .fill{ width:55%; }
+
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(18px);
+    border-radius: 20px;
+    padding: 32px 28px;
+    min-height: 360px;
+    display:flex; flex-direction:column;
+    animation: rise .4s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes rise{ from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:translateY(0);} }
+
+  .kicker{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 11.5px; letter-spacing:.1em; text-transform:uppercase;
+    color: var(--cyan);
+    margin-bottom: 10px;
+  }
+
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size: 27px; font-weight:700; line-height:1.15;
+    margin: 0 0 8px;
+  }
+  h1 span{ background: var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+
+  .hint{ color: var(--ink-soft); font-size: 14.5px; line-height:1.5; margin-bottom:22px; }
+
+  textarea, input[type=text]{
+    width:100%;
+    font-family:'Inter', sans-serif;
+    font-size: 15px;
+    padding: 15px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--panel-border);
+    background: rgba(255,255,255,0.03);
+    color: var(--ink);
+    outline:none;
+    resize: vertical;
+  }
+  textarea{ min-height: 96px; }
+  textarea:focus, input[type=text]:focus{ border-color: var(--violet); box-shadow: 0 0 0 3px rgba(139,92,246,0.18); }
+  textarea::placeholder, input::placeholder{ color:#5F5C77; }
+
+  .options{
+    display:grid; grid-template-columns: 1fr 1fr; gap:10px;
+    margin-top: 4px;
+  }
+  .opt{
+    display:flex; align-items:center; gap:9px;
+    padding: 13px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--panel-border);
+    background: rgba(255,255,255,0.025);
+    cursor:pointer;
+    font-size: 14px;
+    transition: all .15s ease;
+  }
+  .opt .ic{ font-size: 18px; }
+  .opt:hover{ border-color: rgba(139,92,246,0.5); }
+  .opt.sel{
+    border-color: var(--violet);
+    background: linear-gradient(120deg, rgba(139,92,246,0.18), rgba(34,211,238,0.1));
+    box-shadow: 0 0 0 1px var(--violet), 0 0 20px rgba(139,92,246,0.25);
+  }
+  .opt.custom{ grid-column: 1 / -1; }
+
+  .grow{ flex:1; }
+
+  .nav{ display:flex; justify-content:space-between; align-items:center; margin-top:24px; }
+
+  button.next, button.start{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600; font-size: 14.5px;
+    background: var(--grad);
+    color: #0A0B14;
+    border:none; padding: 13px 24px; border-radius: 11px;
+    cursor:pointer;
+    display:flex; align-items:center; gap:8px;
+    transition: transform .12s ease, filter .15s ease;
+  }
+  button.next:hover, button.start:hover{ filter: brightness(1.08); }
+  button.next:active, button.start:active{ transform: scale(0.97); }
+  button.next:disabled{ opacity:.4; cursor:default; }
+
+  button.back{
+    background:none; border:none; color: var(--ink-soft);
+    font-family:'Inter', sans-serif; font-size:14px; cursor:pointer;
+  }
+  button.back:hover{ color: var(--ink); }
+
+  .spinner{
+    width:15px; height:15px; border-radius:50%;
+    border: 2px solid rgba(10,11,20,0.25); border-top-color:#0A0B14;
+    animation: spin .7s linear infinite; display:none;
+  }
+  .loading .spinner{ display:inline-block; }
+  @keyframes spin{ to{ transform: rotate(360deg);} }
+
+  .error{ color: var(--pink); font-size:13.5px; margin-top:12px; display:none; }
+  .error.show{ display:block; }
+
+  /* result screen */
+  .result-badge{
+    align-self:flex-start;
+    font-family:'JetBrains Mono', monospace; font-size:11.5px;
+    color:#0A0B14; background: var(--grad);
+    padding:5px 12px; border-radius: 100px; margin-bottom:16px;
+  }
+  .output{
+    font-family:'JetBrains Mono', monospace; font-size:14px; line-height:1.7;
+    white-space: pre-wrap;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px; padding: 18px;
+    flex:1;
+    outline: none;
+  }
+  .output:focus{ border-color: var(--violet); box-shadow: 0 0 0 3px rgba(139,92,246,0.14); }
+  .output .var{
+    color: var(--cyan); background: rgba(34,211,238,0.14);
+    padding:1px 4px; border-radius:3px;
+    border-bottom: 1px dashed var(--cyan);
+  }
+  .edit-hint{ font-size:12px; color: var(--ink-soft); margin-top:8px; }
+
+  .result-actions{ display:flex; gap:10px; margin-top:16px; }
+  button.ghost{
+    font-family:'Space Grotesk', sans-serif; font-size:13.5px;
+    background: transparent; border:1px solid var(--panel-border); color: var(--ink);
+    padding:11px 18px; border-radius:10px; cursor:pointer;
+  }
+  button.ghost:hover{ border-color: var(--violet); }
+
+  .dropzone{
+    border: 1.5px dashed var(--panel-border);
+    border-radius: 14px;
+    padding: 30px 18px;
+    text-align:center;
+    cursor:pointer;
+    background: rgba(255,255,255,0.02);
+    transition: all .15s ease;
+  }
+  .dropzone:hover, .dropzone.drag{ border-color: var(--violet); background: rgba(139,92,246,0.06); }
+  .dropzone .ic{ font-size: 30px; display:block; margin-bottom:10px; }
+  .dropzone .label{ font-size:14px; color: var(--ink-soft); }
+  .dropzone input{ display:none; }
+  .preview{ margin-top:16px; display:flex; align-items:center; gap:12px; }
+  .preview img{ width:64px; height:64px; object-fit:cover; border-radius:10px; border:1px solid var(--panel-border); }
+  .preview .name{ font-size:13px; color: var(--ink-soft); }
+  .note{
+    font-family:'JetBrains Mono', monospace; font-size:12.5px; line-height:1.6;
+    color: var(--ink-soft); background: rgba(255,255,255,0.03);
+    border-left: 2px solid var(--cyan); border-radius: 4px 10px 10px 4px;
+    padding: 12px 14px; margin-top:14px;
+  }
+
+  .destinations{ margin-top:18px; }
+  .destinations .dlabel{
+    font-family:'JetBrains Mono', monospace; font-size:11.5px; letter-spacing:.08em; text-transform:uppercase;
+    color: var(--ink-soft); margin-bottom:10px;
+  }
+  .dest-list{ display:flex; flex-direction:column; gap:8px; }
+  .dest{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding: 12px 14px; border-radius: 12px;
+    border: 1px solid var(--panel-border);
+    background: rgba(255,255,255,0.025);
+    text-decoration:none; color: var(--ink);
+    transition: all .15s ease;
+  }
+  .dest:hover{ border-color: var(--violet); background: rgba(139,92,246,0.08); }
+  .dest .dname{ font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:14px; display:flex; align-items:center; gap:8px; }
+  .dest .dnote{ font-size:12px; color: var(--ink-soft); margin-top:2px; }
+  .dest .arrow{ color: var(--cyan); font-size:16px; }
+
+  footer{
+    text-align:center; margin-top:26px;
+    font-family:'JetBrains Mono', monospace; font-size:11.5px; color: #514F68;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand">
+    <div class="logo"><span class="dot"></span> DIZ DIRETO</div>
+    <button class="hist-btn" id="histBtn">🕘 Histórico <span class="badge" id="histBadge" style="display:none;">0</span></button>
+  </div>
+  <div class="trail" id="trail"></div>
+  <div class="card" id="card"><!-- injected --></div>
+  <footer>protótipo de validação · powered by IA</footer>
+</div>
+
+<script>
+const state = { screen: 'start', projectInput: '', projectType: '', questions: [], stepIndex: 0, answers: {}, finalPrompt: '', requiresAttachment: false, attachmentLabel: '', attachmentBase64: '', attachmentMime: '', attachmentName: '', history: [] };
+
+const cardEl = document.getElementById('card');
+const trailEl = document.getElementById('trail');
+const histBtn = document.getElementById('histBtn');
+const histBadge = document.getElementById('histBadge');
+
+function updateHistBadge(){
+  if(state.history.length > 0){
+    histBadge.style.display = 'inline';
+    histBadge.textContent = state.history.length;
+  }else{
+    histBadge.style.display = 'none';
+  }
+}
+
+histBtn.addEventListener('click', renderHistory);
+
+function renderHistory(){
+  state.screen = 'history';
+  trailEl.innerHTML = '';
+  const items = state.history;
+  cardEl.innerHTML = `
+    <div class="kicker">seus projetos</div>
+    <h1>Histórico</h1>
+    <p class="hint">Projetos gerados nesta sessão. Fecha se você recarregar a página.</p>
+    ${items.length === 0 ? '<div class="hist-empty">Nenhum projeto ainda. Crie o primeiro!</div>' : items.map((h,i)=>`
+      <div class="hist-item" data-idx="${i}">
+        <div class="htype">${esc(h.projectType)}</div>
+        <div class="hpreview">${esc(h.prompt.slice(0,140))}${h.prompt.length>140?'…':''}</div>
+        <div class="htime">${h.time}</div>
+      </div>
+    `).join('')}
+    <div class="grow"></div>
+    <div class="nav">
+      <button class="back" id="histBack">← voltar</button>
+      <span></span>
+    </div>
+  `;
+  cardEl.querySelectorAll('.hist-item').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const h = state.history[+el.dataset.idx];
+      state.projectType = h.projectType;
+      state.finalPrompt = h.prompt;
+      state.attachmentBase64 = h.hadAttachment ? state.attachmentBase64 : '';
+      state.projectInput = h.projectInput;
+      renderResult();
+    });
+  });
+  document.getElementById('histBack').addEventListener('click', ()=>{
+    if(state.finalPrompt) renderResult(); else renderStart();
+  });
+}
+
+function renderTrail(){
+  const extra = state.requiresAttachment ? 1 : 0;
+  const total = Math.max(state.questions.length + extra, 1);
+  let html = '';
+  for(let i=0;i<total;i++){
+    let cls = 'seg';
+    if(state.screen==='result') cls += ' done';
+    else if(i < state.stepIndex) cls += ' done';
+    else if(i === state.stepIndex && (state.screen==='question' || state.screen==='attachment')) cls += ' current';
+    html += `<div class="${cls}"><div class="fill"></div></div>`;
+  }
+  trailEl.innerHTML = state.questions.length ? html : '';
+}
+
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function highlightVars(t){ return esc(t).replace(/\[([^\]]+)\]/g, '<span class="var">[$1]</span>'); }
+
+function getDeviceId(){
+  let id = localStorage.getItem('dizDireitoDeviceId');
+  if(!id){
+    id = 'dev_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('dizDireitoDeviceId', id);
+  }
+  return id;
+}
+
+async function apiPost(path, body){
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-device-id': getDeviceId() },
+    body: JSON.stringify(body)
+  });
+  if(response.status === 429){
+    const err = await response.json();
+    const e = new Error(err.message || 'Limite atingido');
+    e.quotaExceeded = true;
+    throw e;
+  }
+  if(!response.ok){
+    throw new Error('Erro no servidor');
+  }
+  return response.json();
+}
+
+function renderStart(){
+  state.screen = 'start';
+  renderTrail();
+  cardEl.innerHTML = `
+    <div class="kicker">passo 1 — o que você quer criar</div>
+    <h1>Me conta o que <span>você precisa</span>.</h1>
+    <p class="hint">Pode ser qualquer coisa: uma foto pro Instagram, um anúncio, um código, um texto de venda, um vídeo. A gente descobre o resto juntos.</p>
+    <textarea id="startInput" placeholder="Ex: quero criar uma foto legal para postar no Instagram"></textarea>
+    <div class="error" id="startError">Escreve alguma coisa primeiro :)</div>
+    <div class="nav">
+      <span></span>
+      <button class="start" id="startBtn"><span class="spinner"></span><span>Começar</span></button>
+    </div>
+  `;
+  document.getElementById('startBtn').addEventListener('click', startFlow);
+}
+
+async function startFlow(){
+  const val = document.getElementById('startInput').value.trim();
+  const errEl = document.getElementById('startError');
+  const btn = document.getElementById('startBtn');
+  if(!val){ errEl.classList.add('show'); return; }
+  errEl.classList.remove('show');
+  state.projectInput = val;
+  btn.disabled = true; btn.classList.add('loading');
+
+  try{
+    const json = await apiPost('/api/questions', { projectInput: val });
+    state.projectType = json.project_type || 'projeto';
+    state.questions = json.questions || [];
+    state.requiresAttachment = !!json.requires_attachment;
+    state.attachmentLabel = json.attachment_label || 'Anexe um arquivo de referência';
+    state.attachmentBase64 = ''; state.attachmentMime = ''; state.attachmentName = '';
+    state.stepIndex = 0;
+    state.answers = {};
+    if(state.questions.length === 0) throw new Error('sem perguntas');
+    renderQuestion();
+  }catch(e){
+    btn.disabled = false; btn.classList.remove('loading');
+    errEl.textContent = e.quotaExceeded ? e.message : 'Não consegui entender, tenta descrever de outro jeito.';
+    errEl.classList.add('show');
+  }
+}
+
+function renderQuestion(){
+  state.screen = 'question';
+  renderTrail();
+  const q = state.questions[state.stepIndex];
+  const total = state.questions.length;
+  const current = state.answers[q.id] || null;
+
+  let optsHtml = q.options.map((o,i) => `
+    <div class="opt${current===o.label?' sel':''}" data-label="${esc(o.label)}">
+      <span class="ic">${o.icon||'✨'}</span><span>${esc(o.label)}</span>
+    </div>
+  `).join('');
+
+  cardEl.innerHTML = `
+    <div class="kicker">passo ${state.stepIndex+2} de ${total+2} — ${esc(state.projectType)}</div>
+    <h1>${esc(q.label)}</h1>
+    <p class="hint">Escolhe a opção que mais combina, ou descreve com suas palavras.</p>
+    <div class="options">
+      ${optsHtml}
+      <div class="opt custom" id="customOpt">
+        <span class="ic">✏️</span><input type="text" id="customInput" placeholder="Outro... (digite aqui)">
+      </div>
+    </div>
+    <div class="grow"></div>
+    <div class="nav">
+      <button class="back" id="backBtn">${state.stepIndex===0 ? '← voltar ao início' : '← voltar'}</button>
+      <button class="next" id="nextBtn" ${current?'':'disabled'}><span class="spinner"></span><span>${state.stepIndex===total-1?(state.requiresAttachment?'Próxima':'Ver resultado'):'Próxima'}</span></button>
+    </div>
+  `;
+
+  cardEl.querySelectorAll('.opt:not(.custom)').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      state.answers[q.id] = el.dataset.label;
+      document.getElementById('customInput').value = '';
+      renderQuestion();
+    });
+  });
+
+  const customInput = document.getElementById('customInput');
+  customInput.addEventListener('input', ()=>{
+    const v = customInput.value.trim();
+    state.answers[q.id] = v || null;
+    document.getElementById('nextBtn').disabled = !v;
+    cardEl.querySelectorAll('.opt:not(.custom)').forEach(o=>o.classList.remove('sel'));
+  });
+
+  document.getElementById('backBtn').addEventListener('click', ()=>{
+    if(state.stepIndex===0){ renderStart(); }
+    else{ state.stepIndex--; renderQuestion(); }
+  });
+
+  document.getElementById('nextBtn').addEventListener('click', ()=>{
+    if(state.stepIndex < total-1){
+      state.stepIndex++;
+      renderQuestion();
+    }else if(state.requiresAttachment){
+      state.stepIndex++;
+      renderAttachment();
+    }else{
+      generateFinal();
+    }
+  });
+}
+
+function fileToBase64(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=> resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderAttachment(){
+  state.screen = 'attachment';
+  renderTrail();
+  const total = state.questions.length;
+  cardEl.innerHTML = `
+    <div class="kicker">passo ${total+2} de ${total+3} — anexo</div>
+    <h1>${esc(state.attachmentLabel)}</h1>
+    <p class="hint">A IA vai analisar o arquivo pra deixar o prompt final bem específico pra ele.</p>
+    <label class="dropzone" id="dropzone">
+      <span class="ic">📎</span>
+      <span class="label" id="dzLabel">Clique para escolher um arquivo (imagem)</span>
+      <input type="file" id="fileInput" accept="image/*">
+    </label>
+    <div class="preview" id="preview" style="display:none;">
+      <img id="previewImg">
+      <span class="name" id="previewName"></span>
+    </div>
+    <div class="grow"></div>
+    <div class="nav">
+      <button class="back" id="backBtn">← voltar</button>
+      <button class="next" id="attachNextBtn" ${state.attachmentBase64?'':'disabled'}><span class="spinner"></span><span>Ver resultado</span></button>
+    </div>
+  `;
+
+  const fileInput = document.getElementById('fileInput');
+  fileInput.addEventListener('change', async ()=>{
+    const file = fileInput.files[0];
+    if(!file) return;
+    state.attachmentMime = file.type;
+    state.attachmentName = file.name;
+    state.attachmentBase64 = await fileToBase64(file);
+    document.getElementById('dzLabel').textContent = 'Arquivo carregado ✓';
+    document.getElementById('preview').style.display = 'flex';
+    document.getElementById('previewImg').src = 'data:'+file.type+';base64,'+state.attachmentBase64;
+    document.getElementById('previewName').textContent = file.name;
+    document.getElementById('attachNextBtn').disabled = false;
+  });
+
+  document.getElementById('backBtn').addEventListener('click', ()=>{
+    state.stepIndex--;
+    renderQuestion();
+  });
+
+  document.getElementById('attachNextBtn').addEventListener('click', generateFinal);
+}
+
+async function generateFinal(){
+  const btn = document.getElementById('attachNextBtn') || document.getElementById('nextBtn');
+  btn.disabled = true; btn.classList.add('loading');
+
+  try{
+    const json = await apiPost('/api/final-prompt', {
+      projectInput: state.projectInput,
+      questions: state.questions,
+      answers: state.answers,
+      attachmentBase64: state.attachmentBase64 || undefined,
+      attachmentMime: state.attachmentMime || undefined
+    });
+    const text = json.finalPrompt;
+    state.finalPrompt = text;
+    state.history.unshift({
+      projectType: state.projectType,
+      projectInput: state.projectInput,
+      prompt: text,
+      hadAttachment: !!state.attachmentBase64,
+      time: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
+    });
+    if(state.history.length > 10) state.history.pop();
+    updateHistBadge();
+    renderResult();
+  }catch(e){
+    btn.disabled = false; btn.classList.remove('loading');
+  }
+}
+
+function suggestDestinations(){
+  const text = (state.projectType + ' ' + state.projectInput).toLowerCase();
+  const has = (...words) => words.some(w => text.includes(w));
+
+  if(state.attachmentBase64 || has('foto','imagem','design','logo','ilustra','arte','capa','banner','thumbnail')){
+    return [
+      { name: 'Midjourney', icon:'🎨', note: 'Melhor qualidade estética geral', url: 'https://www.midjourney.com/' },
+      { name: 'Ideogram', icon:'🖼️', note: 'Ótimo com texto dentro da imagem', url: 'https://ideogram.ai/' },
+      { name: 'ChatGPT (imagens)', icon:'✨', note: 'Fácil de usar, direto do navegador', url: 'https://chatgpt.com/' },
+      { name: 'Leonardo AI', icon:'🎭', note: 'Bom para estilos artísticos variados', url: 'https://leonardo.ai/' }
+    ];
+  }
+  if(has('vídeo','video','reels','tiktok','animação','animacao')){
+    return [
+      { name: 'Runway', icon:'🎬', note: 'Geração e edição de vídeo com IA', url: 'https://runwayml.com/' },
+      { name: 'Pika', icon:'🎞️', note: 'Rápido pra clipes curtos', url: 'https://pika.art/' },
+      { name: 'Sora (OpenAI)', icon:'🌀', note: 'Vídeos mais longos e realistas', url: 'https://openai.com/sora' }
+    ];
+  }
+  if(has('código','codigo','programação','programacao','script','python','javascript','app','api')){
+    return [
+      { name: 'Claude', icon:'🤖', note: 'Ótimo pra código e explicações claras', url: 'https://claude.ai/' },
+      { name: 'ChatGPT', icon:'💬', note: 'Boa opção alternativa', url: 'https://chatgpt.com/' },
+      { name: 'GitHub Copilot', icon:'🧩', note: 'Direto no seu editor de código', url: 'https://github.com/features/copilot' }
+    ];
+  }
+  return [
+    { name: 'Claude', icon:'🤖', note: 'Ótimo pra textos com nuance e contexto', url: 'https://claude.ai/' },
+    { name: 'ChatGPT', icon:'💬', note: 'Rápido e bem conhecido', url: 'https://chatgpt.com/' },
+    { name: 'Gemini', icon:'♊', note: 'Boa opção integrada ao Google', url: 'https://gemini.google.com/' }
+  ];
+}
+
+async function copyText(text){
+  try{
+    await navigator.clipboard.writeText(text);
+    return true;
+  }catch(e){
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    }catch(e2){
+      return false;
+    }
+  }
+}
+
+function renderResult(){
+  state.screen = 'result';
+  renderTrail();
+  cardEl.innerHTML = `
+    <div class="result-badge">🎉 projeto concluído</div>
+    <h1>Seu prompt tá <span>pronto</span>.</h1>
+    <p class="hint">Copia e cola direto na IA que você usa. Os campos em destaque são pra você personalizar.</p>
+    <div class="output" id="outputText" contenteditable="true" spellcheck="false"></div>
+    <div class="edit-hint">💡 clique no texto acima pra editar os campos destacados antes de copiar</div>
+    ${state.attachmentBase64 ? '<div class="note">📎 A IA analisou sua foto pra deixar esse prompt específico pra ela. Cole esse prompt numa ferramenta de geração/edição de imagem (Midjourney, Ideogram etc) pra ver o resultado final — gerar a imagem direto aqui no app exigiria conectar um serviço de geração de imagem.</div>' : ''}
+    <div class="result-actions">
+      <button class="next" id="copyBtn">Copiar prompt</button>
+      <button class="ghost" id="restartBtn">Criar outro projeto</button>
+    </div>
+    <div class="destinations">
+      <div class="dlabel">onde usar esse prompt</div>
+      <div class="dest-list">
+        ${suggestDestinations().map(d => `
+          <a class="dest" href="${d.url}" target="_blank" rel="noopener">
+            <div>
+              <div class="dname">${d.icon} ${esc(d.name)}</div>
+              <div class="dnote">${esc(d.note)}</div>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  document.getElementById('outputText').innerHTML = highlightVars(state.finalPrompt);
+  document.getElementById('copyBtn').addEventListener('click', async ()=>{
+    const outputEl = document.getElementById('outputText');
+    const liveText = outputEl.innerText;
+    const b = document.getElementById('copyBtn');
+    const ok = await copyText(liveText);
+    if(ok){
+      b.innerHTML = '<span>Copiado! ✓</span>';
+      setTimeout(()=>{ b.innerHTML = '<span>Copiar prompt</span>'; }, 1600);
+    }else{
+      b.innerHTML = '<span>Selecionado — use Ctrl+C</span>';
+      const range = document.createRange();
+      range.selectNodeContents(outputEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      setTimeout(()=>{ b.innerHTML = '<span>Copiar prompt</span>'; }, 2600);
+    }
+  });
+  document.getElementById('restartBtn').addEventListener('click', renderStart);
+}
+
+renderStart();
+</script>
+</body>
+</html>
