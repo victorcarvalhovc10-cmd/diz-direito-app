@@ -46,7 +46,7 @@
     position: relative;
   }
   .mascot-track{
-    width: 170px; height: 165px; position: relative;
+    width: 230px; height: 195px; position: relative;
   }
   .pug-face{
     position:absolute; bottom:0; left:50%; transform:translateX(-50%);
@@ -54,6 +54,7 @@
   .pug-eye{
     animation: blink 4.5s ease-in-out infinite;
     transform-origin: center;
+    transform-box: fill-box;
   }
   .pug-eye.eye-b{ animation-delay: 0.05s; }
   @keyframes blink{
@@ -61,7 +62,7 @@
     95%{ transform: scaleY(0.1); }
   }
   .idea-bulb{
-    position:absolute; top:-6px; left:50%; transform:translateX(-50%);
+    position:absolute; top:-18px; left:50%; transform:translateX(-50%);
     opacity:0; animation: idea-cycle 7s ease-in-out infinite;
   }
   @keyframes idea-cycle{
@@ -70,7 +71,7 @@
     52%, 100%{ opacity:0; transform:translateX(-50%) translateY(4px) scale(0.8); }
   }
   .thought-bubble{
-    position:absolute; top:-2px; left:50%; transform:translateX(38px);
+    position:absolute; top:-12px; left:50%; transform:translateX(56px);
     opacity:0; animation: thought-cycle 7s ease-in-out infinite;
     background: var(--panel); border:1px solid var(--panel-border);
     border-radius: 10px; padding:6px 10px; white-space:nowrap;
@@ -78,19 +79,20 @@
     backdrop-filter: blur(8px);
   }
   @keyframes thought-cycle{
-    0%, 55%{ opacity:0; transform:translateX(38px) translateY(4px); }
-    65%, 90%{ opacity:1; transform:translateX(38px) translateY(0); }
-    98%, 100%{ opacity:0; transform:translateX(38px) translateY(4px); }
+    0%, 55%{ opacity:0; transform:translateX(56px) translateY(4px); }
+    65%, 90%{ opacity:1; transform:translateX(56px) translateY(0); }
+    98%, 100%{ opacity:0; transform:translateX(56px) translateY(4px); }
   }
 
   .app{ width:100%; max-width: 560px; }
 
   .brand{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    flex-wrap: wrap;
     font-family:'Space Grotesk', sans-serif;
     font-weight:600; font-size:15px;
     color: var(--ink-soft);
-    margin-bottom: 42px;
+    margin-bottom: 30px;
   }
   .brand .logo{ display:flex; align-items:center; gap:10px; }
   .brand .dot{ width:8px; height:8px; border-radius:50%; background: var(--grad); box-shadow: 0 0 12px var(--violet); }
@@ -201,6 +203,10 @@
     box-shadow: 0 0 0 1px var(--violet), 0 0 20px rgba(139,92,246,0.25);
   }
   .opt.custom{ grid-column: 1 / -1; }
+  .opt-visual{ flex-direction:column; align-items:flex-start; gap:8px; padding:10px; }
+  .opt-visual .ic-visual{ align-self:center; }
+  .opt-visual .ic-visual svg{ display:block; }
+  .opt-visual span:last-child{ font-size:12.5px; text-align:center; width:100%; }
 
   .grow{ flex:1; }
 
@@ -281,6 +287,29 @@
   }
   button.ghost:hover{ border-color: var(--violet); }
 
+  .dropzone-compact{
+    padding: 14px 16px;
+    display:flex; flex-direction:row; align-items:center; gap:10px;
+    margin-top: 14px;
+    text-align:left;
+  }
+  .dropzone-compact .ic{ font-size:18px; margin-bottom:0; }
+  .dropzone-compact .label{ font-size:13px; }
+  .attach-chips{
+    display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;
+  }
+  .attach-chip{
+    display:flex; align-items:center; gap:6px;
+    background: rgba(255,255,255,0.04); border:1px solid var(--panel-border);
+    border-radius: 100px; padding: 4px 10px 4px 4px;
+  }
+  .attach-chip img{ width:24px; height:24px; border-radius:50%; object-fit:cover; }
+  .attach-chip-name{ font-size:12px; color: var(--ink-soft); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .attach-chip-remove{
+    background:none; border:none; color: var(--ink-soft); cursor:pointer; font-size:12px; padding:2px;
+  }
+  .attach-chip-remove:hover{ color: var(--pink); }
+
   .dropzone{
     border: 1.5px dashed var(--panel-border);
     border-radius: 14px;
@@ -332,7 +361,7 @@
 <body>
 <div class="app">
   <div class="brand">
-    <div class="logo"><img src="/logo.svg" alt="Diz Direito" style="height:64px;width:auto;"></div>
+    <div class="logo"><img src="/logo.svg" alt="Diz Direito" style="height:150px;width:auto;max-width:100%;"></div>
     <button class="hist-btn" id="histBtn">🕘 Histórico <span class="badge" id="histBadge" style="display:none;">0</span></button>
   </div>
   <div class="trail" id="trail"></div>
@@ -341,7 +370,7 @@
 </div>
 
 <script>
-const state = { screen: 'start', projectInput: '', projectType: '', outputType: 'texto', questions: [], stepIndex: 0, answers: {}, finalPrompt: '', requiresAttachment: false, attachmentLabel: '', attachmentBase64: '', attachmentMime: '', attachmentName: '', history: [], executedResult: '', executedImageUrl: '' };
+const state = { screen: 'start', projectInput: '', projectType: '', outputType: 'texto', questions: [], stepIndex: 0, answers: {}, finalPrompt: '', requiresAttachment: false, attachmentLabel: '', attachments: [], history: [], executedResult: '', executedImageUrl: '' };
 
 const cardEl = document.getElementById('card');
 const trailEl = document.getElementById('trail');
@@ -388,7 +417,7 @@ function renderHistory(){
       state.outputType = h.outputType || 'texto';
       state.executedResult = h.executedResult || '';
       state.executedImageUrl = h.executedImageUrl || '';
-      state.attachmentBase64 = h.hadAttachment ? state.attachmentBase64 : '';
+      state.attachments = h.hadAttachment ? state.attachments : [];
       state.projectInput = h.projectInput;
       renderResult();
     });
@@ -442,6 +471,24 @@ async function apiPost(path, body){
   return response.json();
 }
 
+function renderStartAttachChips(){
+  const el = document.getElementById('startAttachChips');
+  if(!el) return;
+  el.innerHTML = state.attachments.map((a, i) => `
+    <div class="attach-chip">
+      <img src="data:${a.mime};base64,${a.base64}" alt="${esc(a.name)}">
+      <span class="attach-chip-name">${esc(a.name)}</span>
+      <button type="button" class="attach-chip-remove" data-idx="${i}">✕</button>
+    </div>
+  `).join('');
+  el.querySelectorAll('.attach-chip-remove').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      state.attachments.splice(+btn.dataset.idx, 1);
+      renderStartAttachChips();
+    });
+  });
+}
+
 function renderStart(){
   state.screen = 'start';
   renderTrail();
@@ -458,46 +505,42 @@ function renderStart(){
         </div>
         <div class="thought-bubble" id="pugThought">Vamos criar algo incrível!</div>
         <div class="pug-face">
-          <svg width="150" height="140" viewBox="0 0 150 140" fill="none">
+          <svg width="210" height="153" viewBox="0 0 460 335" fill="none">
             <defs>
-              <radialGradient id="faceShade" cx="42%" cy="35%" r="70%">
-                <stop offset="0%" stop-color="#F0D2A6"/>
-                <stop offset="100%" stop-color="#DCB284"/>
+              <radialGradient id="faceGrad" cx="45%" cy="35%" r="70%">
+                <stop offset="0%" stop-color="#E8CBA0"/>
+                <stop offset="100%" stop-color="#D2A874"/>
               </radialGradient>
             </defs>
-            <!-- ears -->
-            <path d="M28 34c-14-9-30-3-31 12-1 13 12 22 26 18z" fill="#6B4128"/>
-            <path d="M31 38c-9-5-20-1-21 9-1 9 8 15 18 13z" fill="#83533A"/>
-            <path d="M118 32c14-8 30-1 30 14 0 13-13 21-27 16z" fill="#6B4128"/>
-            <path d="M115 37c9-6 20-3 21 7 1 9-7 15-17 14z" fill="#83533A"/>
-            <!-- head -->
-            <ellipse cx="75" cy="72" rx="55" ry="50" fill="url(#faceShade)"/>
-            <!-- forehead wrinkles -->
-            <path d="M46 42c10-7 20-9 29-9s19 2 29 9" stroke="#C79A68" stroke-width="2.4" stroke-linecap="round" fill="none" opacity="0.7"/>
-            <path d="M40 54c12-6 23-8 35-8s23 2 35 8" stroke="#C79A68" stroke-width="2.2" stroke-linecap="round" fill="none" opacity="0.55"/>
-            <!-- cheeks shading -->
-            <ellipse cx="38" cy="82" rx="14" ry="10" fill="#CFA271" opacity="0.35"/>
-            <ellipse cx="112" cy="82" rx="14" ry="10" fill="#CFA271" opacity="0.35"/>
-            <!-- muzzle -->
-            <ellipse cx="75" cy="98" rx="30" ry="22" fill="#EAC896"/>
-            <ellipse cx="75" cy="100" rx="24" ry="16" fill="#3B2A20"/>
-            <ellipse cx="75" cy="96" rx="20" ry="12" fill="#54392A"/>
-            <!-- nose -->
-            <ellipse cx="75" cy="92" rx="10" ry="7" fill="#1A120C"/>
-            <ellipse cx="72" cy="89" rx="2.6" ry="1.6" fill="#5A5048"/>
-            <path d="M75 98v6" stroke="#1A120C" stroke-width="1.8" stroke-linecap="round"/>
-            <path d="M75 104c-5 4-11 4-16 1M75 104c5 4 11 4 16 1" stroke="#1A120C" stroke-width="1.6" stroke-linecap="round" fill="none"/>
-            <!-- eyes (blink) -->
-            <g class="pug-eye eye-a">
-              <ellipse cx="52" cy="66" rx="8" ry="9" fill="#1A120C"/>
-              <circle cx="55" cy="62" r="2.4" fill="#fff"/>
+            <g transform="translate(100,10)">
+              <path d="M40 70c-30-38-95-30-98 18-3 42 38 68 82 58z" fill="#2B2019"/>
+              <path d="M46 78c-20-24-62-18-63 12-2 27 24 44 53 37z" fill="#3E2E22"/>
+              <path d="M260 66c32-36 96-24 96 24 0 42-40 66-84 54z" fill="#2B2019"/>
+              <path d="M255 74c22-22 63-14 62 15-1 26-27 42-56 34z" fill="#3E2E22"/>
+              <ellipse cx="150" cy="170" rx="150" ry="145" fill="url(#faceGrad)"/>
+              <path d="M62 100c22-20 55-30 88-30s66 10 88 30" stroke="#BB8F5E" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.55"/>
+              <path d="M50 130c26-16 62-24 100-24s74 8 100 24" stroke="#BB8F5E" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.4"/>
+              <path d="M120 92c8 18 6 40-4 58M180 92c-8 18-6 40 4 58" stroke="#BB8F5E" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.5"/>
+              <path d="M150 95c-46 0-76 34-84 70-9 40 8 78 44 96 24 12 56 12 80 0 36-18 53-56 44-96-8-36-38-70-84-70z" fill="#241a14"/>
+              <path d="M150 108c-38 0-64 28-71 58-8 33 6 63 37 78 20 10 48 10 68 0 31-15 45-45 37-78-7-30-33-58-71-58z" fill="#33251c" opacity="0.65"/>
+              <ellipse cx="150" cy="185" rx="34" ry="24" fill="#0F0B08"/>
+              <ellipse cx="138" cy="176" rx="7" ry="4" fill="#4A3B30" opacity="0.8"/>
+              <path d="M150 205v14" stroke="#0F0B08" stroke-width="4" stroke-linecap="round"/>
+              <path d="M150 219c-16 14-36 14-52 4M150 219c16 14 36 14 52 4" stroke="#0F0B08" stroke-width="4" stroke-linecap="round" fill="none"/>
+              <g class="pug-eye eye-a">
+                <ellipse cx="104" cy="150" rx="22" ry="25" fill="#140E0A"/>
+                <ellipse cx="112" cy="140" rx="7" ry="8" fill="#FFFFFF" opacity="0.85"/>
+                <ellipse cx="98" cy="158" rx="5" ry="5" fill="#3A2A20" opacity="0.6"/>
+              </g>
+              <g class="pug-eye eye-b">
+                <ellipse cx="196" cy="150" rx="22" ry="25" fill="#140E0A"/>
+                <ellipse cx="204" cy="140" rx="7" ry="8" fill="#FFFFFF" opacity="0.85"/>
+                <ellipse cx="190" cy="158" rx="5" ry="5" fill="#3A2A20" opacity="0.6"/>
+              </g>
+              <path d="M78 128c10-10 26-13 38-6M182 122c12-7 28-4 38 6" stroke="#A97F52" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.55"/>
+              <ellipse cx="60" cy="205" rx="30" ry="22" fill="#C29B6C" opacity="0.35"/>
+              <ellipse cx="240" cy="205" rx="30" ry="22" fill="#C29B6C" opacity="0.35"/>
             </g>
-            <g class="pug-eye eye-b">
-              <ellipse cx="98" cy="66" rx="8" ry="9" fill="#1A120C"/>
-              <circle cx="101" cy="62" r="2.4" fill="#fff"/>
-            </g>
-            <!-- brow wrinkle above eyes -->
-            <path d="M42 56c5-4 12-5 16-2M92 54c4-3 11-2 16 2" stroke="#B98E5E" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.6"/>
           </svg>
         </div>
       </div>
@@ -507,12 +550,32 @@ function renderStart(){
     <p class="hint">Pode ser qualquer coisa: uma foto pro Instagram, um anúncio, um código, um texto de venda, um vídeo. A gente descobre o resto juntos.</p>
     <textarea id="startInput" placeholder="Ex: quero criar uma foto legal para postar no Instagram"></textarea>
     <div class="error" id="startError">Escreve alguma coisa primeiro :)</div>
+
+    <label class="dropzone dropzone-compact" id="startDropzone">
+      <span class="ic">📎</span>
+      <span class="label" id="startDzLabel">Anexar referência (opcional) — foto, currículo antigo, etc.</span>
+      <input type="file" id="startFileInput" accept="image/*,.pdf,.doc,.docx" multiple>
+    </label>
+    <div class="attach-chips" id="startAttachChips"></div>
+
     <div class="nav">
       <span></span>
       <button class="start" id="startBtn"><span class="spinner"></span><span>Começar</span></button>
     </div>
   `;
   document.getElementById('startBtn').addEventListener('click', startFlow);
+
+  const startFileInput = document.getElementById('startFileInput');
+  startFileInput.addEventListener('change', async ()=>{
+    for(const file of startFileInput.files){
+      if(!file.type.startsWith('image/')) continue;
+      const base64 = await fileToBase64(file);
+      state.attachments.push({ base64, mime: file.type, name: file.name });
+    }
+    startFileInput.value = '';
+    renderStartAttachChips();
+  });
+  renderStartAttachChips();
 
   const pugPhrases = ['Vamos criar algo incrível!', 'Conta sua ideia...', 'Toda ideia começa simples', 'Tô aqui pra ajudar!'];
   let pugPhraseIndex = 0;
@@ -538,10 +601,16 @@ async function startFlow(){
     const json = await apiPost('/api/questions', { projectInput: val });
     state.projectType = json.project_type || 'projeto';
     state.questions = json.questions || [];
-    state.requiresAttachment = !!json.requires_attachment;
+    state.requiresAttachment = !!json.requires_attachment && state.attachments.length === 0;
     state.outputType = json.output_type === 'imagem' ? 'imagem' : 'texto';
     state.attachmentLabel = json.attachment_label || 'Anexe um arquivo de referência';
-    state.attachmentBase64 = ''; state.attachmentMime = ''; state.attachmentName = '';
+
+    // se o projeto for currículo, garante uma pergunta visual de layout
+    const isCurriculo = /curr[íi]culo|resume|\bcv\b/i.test(state.projectType + ' ' + val);
+    if(isCurriculo && !state.questions.some(q => q.id === 'layout_curriculo')){
+      state.questions.push(LAYOUT_CURRICULO_QUESTION);
+    }
+
     state.stepIndex = 0;
     state.answers = {};
     if(state.questions.length === 0) throw new Error('sem perguntas');
@@ -553,6 +622,33 @@ async function startFlow(){
   }
 }
 
+function layoutPreviewSVG(kind){
+  const page = '<rect x="1" y="1" width="38" height="50" rx="2" fill="var(--panel)" stroke="var(--panel-border)" stroke-width="1"/>';
+  const lines = (x, y, w) => `<rect x="${x}" y="${y}" width="${w}" height="2.4" rx="1" fill="var(--ink-soft)" opacity="0.55"/>`;
+  let inner = '';
+  if(kind === 'foto-topo'){
+    inner = `<circle cx="20" cy="12" r="6" fill="var(--violet)"/>${lines(8,23,24)}${lines(6,29,28)}${lines(6,35,20)}${lines(6,41,24)}`;
+  }else if(kind === 'foto-lateral'){
+    inner = `<circle cx="9" cy="12" r="5" fill="var(--violet)"/>${lines(17,9,18)}${lines(17,14,14)}${lines(5,24,30)}${lines(5,30,30)}${lines(5,36,22)}${lines(5,42,26)}`;
+  }else if(kind === 'sem-foto'){
+    inner = `${lines(6,8,28)}${lines(6,14,20)}${lines(6,22,28)}${lines(6,28,24)}${lines(6,34,28)}${lines(6,40,18)}`;
+  }else if(kind === 'foto-canto'){
+    inner = `<circle cx="31" cy="10" r="5" fill="var(--violet)"/>${lines(6,8,18)}${lines(6,14,14)}${lines(6,24,30)}${lines(6,30,30)}${lines(6,36,22)}${lines(6,42,26)}`;
+  }
+  return `<svg width="40" height="52" viewBox="0 0 40 52">${page}${inner}</svg>`;
+}
+
+const LAYOUT_CURRICULO_QUESTION = {
+  id: 'layout_curriculo',
+  label: 'Qual estilo de layout você prefere?',
+  options: [
+    { label: 'Foto no topo, centralizada', svg: layoutPreviewSVG('foto-topo') },
+    { label: 'Foto lateral à esquerda', svg: layoutPreviewSVG('foto-lateral') },
+    { label: 'Sem foto, só texto', svg: layoutPreviewSVG('sem-foto') },
+    { label: 'Foto no canto superior', svg: layoutPreviewSVG('foto-canto') }
+  ]
+};
+
 function renderQuestion(){
   state.screen = 'question';
   renderTrail();
@@ -561,8 +657,8 @@ function renderQuestion(){
   const current = state.answers[q.id] || null;
 
   let optsHtml = q.options.map((o,i) => `
-    <div class="opt${current===o.label?' sel':''}" data-label="${esc(o.label)}">
-      <span class="ic">${o.icon||'✨'}</span><span>${esc(o.label)}</span>
+    <div class="opt${o.svg ? ' opt-visual' : ''}${current===o.label?' sel':''}" data-label="${esc(o.label)}">
+      ${o.svg ? `<span class="ic-visual">${o.svg}</span>` : `<span class="ic">${o.icon||'✨'}</span>`}<span>${esc(o.label)}</span>
     </div>
   `).join('');
 
@@ -646,7 +742,7 @@ function renderAttachment(){
     <div class="grow"></div>
     <div class="nav">
       <button class="back" id="backBtn">← voltar</button>
-      <button class="next" id="attachNextBtn" ${state.attachmentBase64?'':'disabled'}><span class="spinner"></span><span>Ver resultado</span></button>
+      <button class="next" id="attachNextBtn" ${state.attachments.length?'':'disabled'}><span class="spinner"></span><span>Ver resultado</span></button>
     </div>
   `;
 
@@ -654,12 +750,11 @@ function renderAttachment(){
   fileInput.addEventListener('change', async ()=>{
     const file = fileInput.files[0];
     if(!file) return;
-    state.attachmentMime = file.type;
-    state.attachmentName = file.name;
-    state.attachmentBase64 = await fileToBase64(file);
+    const base64 = await fileToBase64(file);
+    state.attachments.push({ base64, mime: file.type, name: file.name });
     document.getElementById('dzLabel').textContent = 'Arquivo carregado ✓';
     document.getElementById('preview').style.display = 'flex';
-    document.getElementById('previewImg').src = 'data:'+file.type+';base64,'+state.attachmentBase64;
+    document.getElementById('previewImg').src = 'data:'+file.type+';base64,'+base64;
     document.getElementById('previewName').textContent = file.name;
     document.getElementById('attachNextBtn').disabled = false;
   });
@@ -681,8 +776,7 @@ async function generateFinal(){
       projectInput: state.projectInput,
       questions: state.questions,
       answers: state.answers,
-      attachmentBase64: state.attachmentBase64 || undefined,
-      attachmentMime: state.attachmentMime || undefined
+      attachments: state.attachments.length ? state.attachments.map(a => ({ base64: a.base64, mime: a.mime })) : undefined
     });
     const text = json.finalPrompt;
     state.finalPrompt = text;
@@ -708,33 +802,61 @@ function getQuickAction(){
   return null;
 }
 
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=> URL.revokeObjectURL(url), 2000);
+}
+
 function downloadTextAsPDF(text, filename){
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit:'pt', format:'a4' });
-  const margin = 48;
-  const maxWidth = 500;
-  const lineHeight = 15;
-  const pageBottom = 780;
-  doc.setFont('Helvetica', 'normal');
-  doc.setFontSize(11);
-  let y = margin;
-  const paragraphs = text.split('\n');
-  paragraphs.forEach(paragraph=>{
-    const lines = doc.splitTextToSize(paragraph || ' ', maxWidth);
-    lines.forEach(line=>{
-      if(y > pageBottom){ doc.addPage(); y = margin; }
-      doc.text(line, margin, y);
-      y += lineHeight;
+  try{
+    if(!window.jspdf || !window.jspdf.jsPDF) throw new Error('jsPDF indisponível');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'a4' });
+    const margin = 48;
+    const maxWidth = 500;
+    const lineHeight = 15;
+    const pageBottom = 780;
+    doc.setFont('Helvetica', 'normal');
+    doc.setFontSize(11);
+    let y = margin;
+    const paragraphs = text.split('\n');
+    paragraphs.forEach(paragraph=>{
+      const lines = doc.splitTextToSize(paragraph || ' ', maxWidth);
+      lines.forEach(line=>{
+        if(y > pageBottom){ doc.addPage(); y = margin; }
+        doc.text(line, margin, y);
+        y += lineHeight;
+      });
     });
-  });
-  doc.save(filename);
+    doc.save(filename);
+  }catch(e){
+    const txtBlob = new Blob([text], { type:'text/plain;charset=utf-8' });
+    downloadBlob(txtBlob, filename.replace(/\.pdf$/i, '.txt'));
+  }
+}
+
+async function downloadImageFile(url, filename){
+  try{
+    const response = await fetch(url, { mode:'cors' });
+    if(!response.ok) throw new Error('falha ao buscar imagem');
+    const blob = await response.blob();
+    downloadBlob(blob, filename);
+  }catch(e){
+    window.open(url, '_blank', 'noopener');
+  }
 }
 
 function suggestDestinations(){
   const text = (state.projectType + ' ' + state.projectInput).toLowerCase();
   const has = (...words) => words.some(w => text.includes(w));
 
-  if(state.attachmentBase64 || has('foto','imagem','design','logo','ilustra','arte','capa','banner','thumbnail')){
+  if(state.attachments.length > 0 || has('foto','imagem','design','logo','ilustra','arte','capa','banner','thumbnail')){
     return [
       { name: 'Midjourney', icon:'🎨', note: 'Melhor qualidade estética geral', url: 'https://www.midjourney.com/' },
       { name: 'Ideogram', icon:'🖼️', note: 'Ótimo com texto dentro da imagem', url: 'https://ideogram.ai/' },
@@ -807,7 +929,7 @@ async function executeResult(){
     outputType: state.outputType,
     executedResult: state.executedResult,
     executedImageUrl: state.executedImageUrl,
-    hadAttachment: !!state.attachmentBase64,
+    hadAttachment: state.attachments.length > 0,
     time: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
   });
   if(state.history.length > 10) state.history.pop();
@@ -842,11 +964,12 @@ function renderResult(){
             ? `<div class="output" id="executedText">${esc(state.executedResult)}</div>`
             : '<div class="note">Não consegui gerar o resultado agora — o prompt abaixo ainda funciona se você colar em outra IA.</div>')
       }
+      ${hasExecuted ? '<div class="result-actions"><button class="ghost" id="downloadBtn">⬇️ Baixar arquivo</button></div>' : ''}
     </div>
 
     <div class="output" id="outputText" contenteditable="true" spellcheck="false"></div>
     <div class="edit-hint">💡 clique no texto acima pra editar os campos destacados antes de copiar</div>
-    ${state.attachmentBase64 ? '<div class="note">📎 A IA analisou sua foto pra deixar esse prompt específico pra ela.</div>' : ''}
+    ${state.attachments.length > 0 ? '<div class="note">📎 A IA analisou seu(s) anexo(s) pra deixar esse prompt específico pra eles.</div>' : ''}
     <div class="result-actions">
       <button class="next" id="resultBtn">✨ Resultado Diz Direto</button>
     </div>
@@ -885,6 +1008,25 @@ function renderResult(){
     resultBtn.title = 'Resultado indisponível dessa vez';
   }
 
+  const downloadBtn = document.getElementById('downloadBtn');
+  if(downloadBtn){
+    downloadBtn.addEventListener('click', async ()=>{
+      downloadBtn.disabled = true;
+      const original = downloadBtn.innerHTML;
+      downloadBtn.innerHTML = 'Baixando...';
+      try{
+        if(state.outputType === 'imagem' && state.executedImageUrl){
+          await downloadImageFile(state.executedImageUrl, 'diz-direito-imagem.jpg');
+        }else if(state.executedResult){
+          downloadTextAsPDF(state.executedResult, 'diz-direito-resultado.pdf');
+        }
+      }finally{
+        downloadBtn.disabled = false;
+        downloadBtn.innerHTML = original;
+      }
+    });
+  }
+
   if(quickAction){
     document.getElementById('quickActionBtn').addEventListener('click', ()=>{
       if(quickAction.type === 'link'){
@@ -914,7 +1056,10 @@ function renderResult(){
       setTimeout(()=>{ b.innerHTML = 'Copiar prompt'; }, 2600);
     }
   });
-  document.getElementById('restartBtn').addEventListener('click', renderStart);
+  document.getElementById('restartBtn').addEventListener('click', ()=>{
+    state.attachments = [];
+    renderStart();
+  });
 }
 
 renderStart();

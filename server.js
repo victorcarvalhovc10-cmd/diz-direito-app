@@ -4,7 +4,7 @@ const cors = require('cors');
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '10mb' })); // 10mb pra caber fotos anexadas
+app.use(express.json({ limit: '25mb' })); // 25mb pra caber múltiplos anexos
 app.use(express.static('public'));
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -84,6 +84,7 @@ app.post('/api/questions', async (req, res) => {
     const system = `Você decompõe pedidos de criação em perguntas interativas para montar o prompt de IA perfeito depois. Dado o pedido do usuário, gere SEMPRE NO MÍNIMO 3 e no máximo 4 perguntas ESPECÍFICAS para esse tipo de projeto (não genéricas — se for uma foto, pergunte sobre estética/composição/luz; se for um texto de venda, pergunte sobre público/tom/gatilho; adapte sempre ao pedido). Nunca gere menos de 3 perguntas: se o pedido for muito simples e você não encontrar 3 perguntas específicas o suficiente, complete com perguntas relevantes mas um pouco mais gerais (ex: tom desejado, formato de saída, nível de detalhe) até atingir o mínimo de 3. Para cada pergunta, gere de 4 a 6 opções curtas (2-4 palavras), específicas ao contexto, cada uma com um emoji representativo.
 Além disso, avalie se esse tipo de projeto normalmente exige que o usuário anexe algum arquivo de referência (uma foto para editar/estilizar, um documento para basear um texto, uma imagem de produto, um logo, etc). Se exigir, marque "requires_attachment": true e escreva um "attachment_label" curto pedindo o anexo certo. Se não fizer sentido pedir anexo, marque "requires_attachment": false.
 Por fim, classifique o "output_type" do projeto como "imagem" (quando o resultado final é uma imagem/foto/ilustração/design) ou "texto" (quando o resultado final é texto, código, roteiro, etc).
+Caso especial — se o pedido for sobre currículo/CV: as perguntas devem ser profissionais e específicas para montar um currículo de verdade, cobrindo (adapte a quantidade ao mínimo/máximo de perguntas): cargo ou área desejada, nível de experiência, principais habilidades/competências técnicas, formação acadêmica, e conquistas ou resultados mensuráveis relevantes. As opções de cada pergunta devem refletir isso (ex: níveis como "Estagiário/Trainee", "Pleno", "Sênior", "Especialista").
 Responda APENAS com JSON válido neste formato exato, sem markdown, sem texto fora do JSON:
 {"project_type": "nome curto do tipo de projeto", "output_type": "imagem", "requires_attachment": true, "attachment_label": "frase curta pedindo o anexo", "questions": [{"id": "slug_curto", "label": "pergunta", "options": [{"label": "opção", "icon": "emoji"}]}]}`;
 
@@ -99,20 +100,21 @@ Responda APENAS com JSON válido neste formato exato, sem markdown, sem texto fo
 
 app.post('/api/final-prompt', async (req, res) => {
   try {
-    const { projectInput, questions, answers, attachmentBase64, attachmentMime } = req.body;
-    const hasImage = !!attachmentBase64;
+    const { projectInput, questions, answers, attachments } = req.body;
+    const imageList = Array.isArray(attachments) ? attachments.filter(a => a && a.base64) : [];
+    const hasImage = imageList.length > 0;
     const qaLines = (questions || []).map(q => `${q.label}: ${answers[q.id]}`).join('\n');
 
-    const system = `Você é um motor de engenharia de prompts. O usuário descreveu um projeto e já respondeu perguntas de refinamento${hasImage ? ', e anexou uma foto de referência que você está vendo' : ''}. Monte o prompt final otimizado em português, pronto para colar em qualquer IA generativa, incorporando TODAS as respostas dadas.
+    const system = `Você é um motor de engenharia de prompts. O usuário descreveu um projeto e já respondeu perguntas de refinamento${hasImage ? `, e anexou ${imageList.length > 1 ? imageList.length + ' arquivos de referência' : 'um arquivo de referência'} que você está vendo` : ''}. Monte o prompt final otimizado em português, pronto para colar em qualquer IA generativa, incorporando TODAS as respostas dadas.
 Aplique boas práticas: contexto claro, persona quando fizer sentido, formato de saída definido, restrições relevantes.
-${hasImage ? 'Como há uma foto anexada: descreva no prompt, com detalhe real e específico, o que está na foto (composição, iluminação, ângulo, cores, ambiente) e como isso deve ser preservado ou transformado. Inclua instruções explícitas contra artefatos comuns de geração de imagem (pele plástica, mãos deformadas, fundo genérico, watermarks) e peça texturas reais e iluminação coerente.' : ''}
+${hasImage ? 'Como há anexo(s): descreva no prompt, com detalhe real e específico, o que está nele(s) (composição, iluminação, ângulo, cores, ambiente, ou conteúdo relevante se for um documento como currículo antigo) e como isso deve ser aproveitado, preservado ou transformado. Se for referência de foto/imagem, inclua instruções explícitas contra artefatos comuns de geração de imagem (pele plástica, mãos deformadas, fundo genérico, watermarks) e peça texturas reais e iluminação coerente.' : ''}
 Se restar alguma informação que só o usuário sabe, inclua como campo entre colchetes, ex: [Nome da marca].
 Responda APENAS com o prompt final, texto puro, sem explicações, sem markdown, sem aspas ao redor.`;
 
     const textContent = `Pedido original: ${projectInput}\n\nRespostas:\n${qaLines}`;
     const content = hasImage
       ? [
-          { type: 'image', source: { type: 'base64', media_type: attachmentMime || 'image/jpeg', data: attachmentBase64 } },
+          ...imageList.map(a => ({ type: 'image', source: { type: 'base64', media_type: a.mime || 'image/jpeg', data: a.base64 } })),
           { type: 'text', text: textContent }
         ]
       : textContent;
