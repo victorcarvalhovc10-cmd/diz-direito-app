@@ -156,11 +156,23 @@ app.post('/api/execute-resume', async (req, res) => {
     const { finalPrompt } = req.body;
     const system = `Você é um especialista em currículos profissionais. Com base no pedido a seguir, gere o conteúdo completo de um currículo profissional otimizado, com linguagem objetiva, verbos de ação e resultados mensuráveis nos pontos de experiência sempre que fizer sentido.
 Para campos de dado pessoal que não foram informados (nome, e-mail, telefone), use um placeholder entre colchetes, ex: [Seu nome], [seu@email.com].
-Responda APENAS com JSON válido, sem markdown, neste formato exato:
+Responda APENAS com JSON válido, compacto, sem markdown, sem comentários, neste formato exato:
 {"name":"...", "title":"...", "contact":"...", "summary":"...", "experience":[{"role":"...","company":"...","period":"...","bullets":["...","..."]}], "education":[{"degree":"...","institution":"...","period":"..."}], "skills":["...","..."]}`;
-    const raw = await callClaude({ system, content: finalPrompt, maxTokens: 2000 });
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const resumeData = JSON.parse(clean);
+    const raw = await callClaude({ system, content: finalPrompt, maxTokens: 3500 });
+    let clean = raw.replace(/```json|```/g, '').trim();
+    // se vier algum texto extra antes/depois do JSON, recorta só o objeto
+    const firstBrace = clean.indexOf('{');
+    const lastBrace = clean.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) {
+      clean = clean.slice(firstBrace, lastBrace + 1);
+    }
+    let resumeData;
+    try {
+      resumeData = JSON.parse(clean);
+    } catch (parseErr) {
+      // fallback: currículo ainda sai, só que como texto corrido dentro do resumo
+      resumeData = { name: '[Seu nome]', title: '', contact: '', summary: raw.replace(/```json|```/g, '').trim(), experience: [], education: [], skills: [] };
+    }
     res.json({ resumeData });
   } catch (err) {
     console.error(err);

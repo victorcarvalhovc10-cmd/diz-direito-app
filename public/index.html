@@ -972,7 +972,7 @@ function suggestDestinations(){
   const text = (state.projectType + ' ' + state.projectInput).toLowerCase();
   const has = (...words) => words.some(w => text.includes(w));
 
-  if(state.attachments.length > 0 || has('foto','imagem','design','logo','ilustra','arte','capa','banner','thumbnail')){
+  if(state.outputType === 'imagem' || has('foto','imagem','design','logo','ilustra','arte','capa','banner','thumbnail')){
     return [
       { name: 'Midjourney', icon:'🎨', note: 'Melhor qualidade estética geral', url: 'https://www.midjourney.com/' },
       { name: 'Ideogram', icon:'🖼️', note: 'Ótimo com texto dentro da imagem', url: 'https://ideogram.ai/' },
