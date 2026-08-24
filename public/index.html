@@ -808,6 +808,9 @@ function getQuickAction(){
   const text = (state.projectType + ' ' + state.projectInput).toLowerCase();
   const has = (...words) => words.some(w => text.includes(w));
 
+  if(state.attachments.length > 0 && has('fundo', 'background')){
+    return { type:'link', icon:'🖼️', label:'Trocar o fundo mantendo sua foto real (remove.bg)', url:'https://www.remove.bg/upload' };
+  }
   if(has('linkedin')){
     return { type:'link', icon:'💼', label:'Abrir LinkedIn e atualizar sua foto', url:'https://www.linkedin.com/in/me/' };
   }
@@ -1081,9 +1084,11 @@ function renderResult(){
 
   let readyBlockHtml = '';
   if(state.outputType === 'imagem'){
+    const hasPhotoRef = state.attachments.some(a => a.kind === 'image' || (a.mime||'').startsWith('image/'));
     readyBlockHtml = `
       <div class="ready-block">
         <div class="result-label">resultado diz direito</div>
+        ${hasPhotoRef ? `<div class="note" style="margin-bottom:12px;">⚠️ Você anexou uma foto, mas o gerador gratuito não usa a foto real — ele cria uma imagem nova a partir de uma descrição em texto que a IA fez dela, então o rosto pode sair diferente. Pra manter sua foto de verdade, veja a sugestão abaixo ou envie a foto direto pro ChatGPT/Gemini.</div>` : ''}
         ${state.executedImageUrl ? `
           <img src="${state.executedImageUrl}" alt="Resultado gerado" id="resultImg"
                style="width:100%;border-radius:12px;border:1px solid var(--panel-border);">
