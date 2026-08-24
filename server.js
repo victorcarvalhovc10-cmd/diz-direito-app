@@ -101,20 +101,29 @@ Responda APENAS com JSON válido neste formato exato, sem markdown, sem texto fo
 app.post('/api/final-prompt', async (req, res) => {
   try {
     const { projectInput, questions, answers, attachments } = req.body;
-    const imageList = Array.isArray(attachments) ? attachments.filter(a => a && a.base64) : [];
-    const hasImage = imageList.length > 0;
+    const allAttachments = Array.isArray(attachments) ? attachments.filter(a => a && a.base64) : [];
+    const imageList = allAttachments.filter(a => (a.mime || '').startsWith('image/'));
+    const pdfList = allAttachments.filter(a => a.mime === 'application/pdf');
+    const otherList = allAttachments.filter(a => !(a.mime || '').startsWith('image/') && a.mime !== 'application/pdf');
+    const hasAnalyzable = imageList.length + pdfList.length > 0;
+    const totalCount = allAttachments.length;
     const qaLines = (questions || []).map(q => `${q.label}: ${answers[q.id]}`).join('\n');
 
-    const system = `Você é um motor de engenharia de prompts. O usuário descreveu um projeto e já respondeu perguntas de refinamento${hasImage ? `, e anexou ${imageList.length > 1 ? imageList.length + ' arquivos de referência' : 'um arquivo de referência'} que você está vendo` : ''}. Monte o prompt final otimizado em português, pronto para colar em qualquer IA generativa, incorporando TODAS as respostas dadas.
+    const system = `Você é um motor de engenharia de prompts. O usuário descreveu um projeto e já respondeu perguntas de refinamento${totalCount ? `, e anexou ${totalCount > 1 ? totalCount + ' arquivos de referência' : 'um arquivo de referência'} que você está vendo (ou que foram mencionados por nome, se o formato não puder ser analisado diretamente)` : ''}. Monte o prompt final otimizado em português, pronto para colar em qualquer IA generativa, incorporando TODAS as respostas dadas.
 Aplique boas práticas: contexto claro, persona quando fizer sentido, formato de saída definido, restrições relevantes.
-${hasImage ? 'Como há anexo(s): descreva no prompt, com detalhe real e específico, o que está nele(s) (composição, iluminação, ângulo, cores, ambiente, ou conteúdo relevante se for um documento como currículo antigo) e como isso deve ser aproveitado, preservado ou transformado. Se for referência de foto/imagem, inclua instruções explícitas contra artefatos comuns de geração de imagem (pele plástica, mãos deformadas, fundo genérico, watermarks) e peça texturas reais e iluminação coerente.' : ''}
+${hasAnalyzable ? 'Como há anexo(s) analisáveis: descreva no prompt, com detalhe real e específico, o que está neles (composição, iluminação, ângulo, cores, ambiente, ou conteúdo relevante se for um documento como currículo antigo) e como isso deve ser aproveitado, preservado ou transformado. Se for referência de foto/imagem, inclua instruções explícitas contra artefatos comuns de geração de imagem (pele plástica, mãos deformadas, fundo genérico, watermarks) e peça texturas reais e iluminação coerente.' : ''}
 Se restar alguma informação que só o usuário sabe, inclua como campo entre colchetes, ex: [Nome da marca].
 Responda APENAS com o prompt final, texto puro, sem explicações, sem markdown, sem aspas ao redor.`;
 
-    const textContent = `Pedido original: ${projectInput}\n\nRespostas:\n${qaLines}`;
-    const content = hasImage
+    let textContent = `Pedido original: ${projectInput}\n\nRespostas:\n${qaLines}`;
+    if(otherList.length){
+      textContent += `\n\nArquivos anexados que não puderam ser analisados diretamente pelo formato (considere-os pelo nome/contexto): ${otherList.map(a => a.name || 'arquivo').join(', ')}`;
+    }
+
+    const content = hasAnalyzable
       ? [
-          ...imageList.map(a => ({ type: 'image', source: { type: 'base64', media_type: a.mime || 'image/jpeg', data: a.base64 } })),
+          ...imageList.map(a => ({ type: 'image', source: { type: 'base64', media_type: a.mime, data: a.base64 } })),
+          ...pdfList.map(a => ({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: a.base64 } })),
           { type: 'text', text: textContent }
         ]
       : textContent;
@@ -139,6 +148,23 @@ app.post('/api/execute-text', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'erro_interno', message: 'Não consegui gerar o resultado. Tenta de novo.' });
+  }
+});
+
+app.post('/api/execute-resume', async (req, res) => {
+  try {
+    const { finalPrompt } = req.body;
+    const system = `Você é um especialista em currículos profissionais. Com base no pedido a seguir, gere o conteúdo completo de um currículo profissional otimizado, com linguagem objetiva, verbos de ação e resultados mensuráveis nos pontos de experiência sempre que fizer sentido.
+Para campos de dado pessoal que não foram informados (nome, e-mail, telefone), use um placeholder entre colchetes, ex: [Seu nome], [seu@email.com].
+Responda APENAS com JSON válido, sem markdown, neste formato exato:
+{"name":"...", "title":"...", "contact":"...", "summary":"...", "experience":[{"role":"...","company":"...","period":"...","bullets":["...","..."]}], "education":[{"degree":"...","institution":"...","period":"..."}], "skills":["...","..."]}`;
+    const raw = await callClaude({ system, content: finalPrompt, maxTokens: 2000 });
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const resumeData = JSON.parse(clean);
+    res.json({ resumeData });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'erro_interno', message: 'Não consegui montar o currículo. Tenta de novo.' });
   }
 });
 

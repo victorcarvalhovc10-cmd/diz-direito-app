@@ -248,6 +248,14 @@
     background: linear-gradient(120deg, var(--cyan), var(--violet));
   }
 
+  .ready-block{
+    margin-bottom: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--violet);
+    background: linear-gradient(120deg, rgba(139,92,246,0.08), rgba(34,211,238,0.05));
+  }
+
   .executed-section{
     margin-bottom: 16px;
     padding: 14px;
@@ -304,6 +312,7 @@
     border-radius: 100px; padding: 4px 10px 4px 4px;
   }
   .attach-chip img{ width:24px; height:24px; border-radius:50%; object-fit:cover; }
+  .attach-chip-file{ font-size:16px; width:24px; text-align:center; }
   .attach-chip-name{ font-size:12px; color: var(--ink-soft); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .attach-chip-remove{
     background:none; border:none; color: var(--ink-soft); cursor:pointer; font-size:12px; padding:2px;
@@ -370,7 +379,7 @@
 </div>
 
 <script>
-const state = { screen: 'start', projectInput: '', projectType: '', outputType: 'texto', questions: [], stepIndex: 0, answers: {}, finalPrompt: '', requiresAttachment: false, attachmentLabel: '', attachments: [], history: [], executedResult: '', executedImageUrl: '' };
+const state = { screen: 'start', projectInput: '', projectType: '', outputType: 'texto', isResume: false, questions: [], stepIndex: 0, answers: {}, finalPrompt: '', requiresAttachment: false, attachmentLabel: '', attachments: [], history: [], executedResult: '', executedImageUrl: '', resumeData: null };
 
 const cardEl = document.getElementById('card');
 const trailEl = document.getElementById('trail');
@@ -415,8 +424,10 @@ function renderHistory(){
       state.projectType = h.projectType;
       state.finalPrompt = h.prompt;
       state.outputType = h.outputType || 'texto';
+      state.isResume = h.isResume || false;
       state.executedResult = h.executedResult || '';
       state.executedImageUrl = h.executedImageUrl || '';
+      state.resumeData = h.resumeData || null;
       state.attachments = h.hadAttachment ? state.attachments : [];
       state.projectInput = h.projectInput;
       renderResult();
@@ -476,7 +487,10 @@ function renderStartAttachChips(){
   if(!el) return;
   el.innerHTML = state.attachments.map((a, i) => `
     <div class="attach-chip">
-      <img src="data:${a.mime};base64,${a.base64}" alt="${esc(a.name)}">
+      ${a.kind === 'image'
+        ? `<img src="data:${a.mime};base64,${a.base64}" alt="${esc(a.name)}">`
+        : `<span class="attach-chip-file">${a.kind === 'pdf' ? '📄' : '📎'}</span>`
+      }
       <span class="attach-chip-name">${esc(a.name)}</span>
       <button type="button" class="attach-chip-remove" data-idx="${i}">✕</button>
     </div>
@@ -568,9 +582,9 @@ function renderStart(){
   const startFileInput = document.getElementById('startFileInput');
   startFileInput.addEventListener('change', async ()=>{
     for(const file of startFileInput.files){
-      if(!file.type.startsWith('image/')) continue;
       const base64 = await fileToBase64(file);
-      state.attachments.push({ base64, mime: file.type, name: file.name });
+      const kind = file.type.startsWith('image/') ? 'image' : (file.type === 'application/pdf' ? 'pdf' : 'other');
+      state.attachments.push({ base64, mime: file.type, name: file.name, kind });
     }
     startFileInput.value = '';
     renderStartAttachChips();
@@ -607,6 +621,7 @@ async function startFlow(){
 
     // se o projeto for currículo, garante uma pergunta visual de layout
     const isCurriculo = /curr[íi]culo|resume|\bcv\b/i.test(state.projectType + ' ' + val);
+    state.isResume = isCurriculo;
     if(isCurriculo && !state.questions.some(q => q.id === 'layout_curriculo')){
       state.questions.push(LAYOUT_CURRICULO_QUESTION);
     }
@@ -796,10 +811,111 @@ function getQuickAction(){
   if(has('instagram', 'reels', 'stories', 'story', 'reel')){
     return { type:'link', icon:'📸', label:'Abrir Instagram para postar', url:'https://www.instagram.com/' };
   }
-  if(has('currículo', 'curriculo', 'resume', ' cv ', 'cv,')){
-    return { type:'download-pdf', icon:'📄', label:'Baixar currículo em PDF' };
-  }
   return null;
+}
+
+function downloadResumePDF(data, filename){
+  try{
+    if(!window.jspdf || !window.jspdf.jsPDF) throw new Error('jsPDF indisponível');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'a4' });
+    const margin = 50;
+    const maxWidth = 495;
+    const pageBottom = 780;
+    let y = margin;
+
+    const checkBreak = (needed) => { if(y + needed > pageBottom){ doc.addPage(); y = margin; } };
+
+    doc.setFont('Helvetica','bold'); doc.setFontSize(22); doc.setTextColor(20,20,20);
+    doc.text(data.name || '[Seu nome]', margin, y); y += 26;
+
+    if(data.title){
+      doc.setFont('Helvetica','normal'); doc.setFontSize(13); doc.setTextColor(90,90,90);
+      doc.text(data.title, margin, y); y += 18;
+    }
+    if(data.contact){
+      doc.setFontSize(10); doc.setTextColor(120,120,120);
+      doc.text(data.contact, margin, y); y += 20;
+    }
+    doc.setDrawColor(180,180,180); doc.line(margin, y, margin+maxWidth, y); y += 18;
+
+    const sectionHeader = (title) => {
+      checkBreak(24);
+      doc.setFont('Helvetica','bold'); doc.setFontSize(12); doc.setTextColor(30,30,30);
+      doc.text(title.toUpperCase(), margin, y); y += 6;
+      doc.setDrawColor(210,210,210); doc.line(margin, y, margin+maxWidth, y); y += 14;
+    };
+
+    if(data.summary){
+      sectionHeader('Resumo');
+      doc.setFont('Helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(50,50,50);
+      const lines = doc.splitTextToSize(data.summary, maxWidth);
+      lines.forEach(line=>{ checkBreak(14); doc.text(line, margin, y); y += 14; });
+      y += 8;
+    }
+
+    if(Array.isArray(data.experience) && data.experience.length){
+      sectionHeader('Experiência');
+      data.experience.forEach(exp=>{
+        checkBreak(18);
+        doc.setFont('Helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,20,20);
+        doc.text(exp.role || '', margin, y);
+        if(exp.period){
+          doc.setFont('Helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(120,120,120);
+          doc.text(exp.period, margin+maxWidth, y, { align:'right' });
+        }
+        y += 14;
+        if(exp.company){
+          doc.setFont('Helvetica','normal'); doc.setFontSize(10); doc.setTextColor(90,90,90);
+          doc.text(exp.company, margin, y); y += 14;
+        }
+        (exp.bullets||[]).forEach(b=>{
+          const lines = doc.splitTextToSize('• ' + b, maxWidth-10);
+          lines.forEach(line=>{
+            checkBreak(13);
+            doc.setFont('Helvetica','normal'); doc.setFontSize(10); doc.setTextColor(50,50,50);
+            doc.text(line, margin+8, y); y += 13;
+          });
+        });
+        y += 8;
+      });
+    }
+
+    if(Array.isArray(data.education) && data.education.length){
+      sectionHeader('Formação');
+      data.education.forEach(edu=>{
+        checkBreak(16);
+        doc.setFont('Helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(20,20,20);
+        doc.text(edu.degree || '', margin, y);
+        if(edu.period){
+          doc.setFont('Helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(120,120,120);
+          doc.text(edu.period, margin+maxWidth, y, { align:'right' });
+        }
+        y += 13;
+        if(edu.institution){
+          doc.setFont('Helvetica','normal'); doc.setFontSize(10); doc.setTextColor(90,90,90);
+          doc.text(edu.institution, margin, y); y += 16;
+        }
+      });
+    }
+
+    if(Array.isArray(data.skills) && data.skills.length){
+      sectionHeader('Habilidades');
+      doc.setFont('Helvetica','normal'); doc.setFontSize(10); doc.setTextColor(50,50,50);
+      const lines = doc.splitTextToSize(data.skills.join('  •  '), maxWidth);
+      lines.forEach(line=>{ checkBreak(14); doc.text(line, margin, y); y += 14; });
+    }
+
+    doc.save(filename);
+  }catch(e){
+    const plain = [data.name, data.title, data.contact, '', data.summary, '', 'EXPERIÊNCIA',
+      ...(data.experience||[]).flatMap(x => [`${x.role} — ${x.company} (${x.period})`, ...(x.bullets||[]).map(b=>'• '+b), '']),
+      'FORMAÇÃO', ...(data.education||[]).map(x=>`${x.degree} — ${x.institution} (${x.period})`),
+      '', 'HABILIDADES', (data.skills||[]).join(', ')
+    ].join('\n');
+    const blob = new Blob([plain], { type:'text/plain;charset=utf-8' });
+    downloadBlob(blob, filename.replace(/\.pdf$/i,'.txt'));
+  }
 }
 
 function downloadBlob(blob, filename){
@@ -911,10 +1027,14 @@ async function copyText(text){
 async function executeResult(){
   state.executedResult = '';
   state.executedImageUrl = '';
+  state.resumeData = null;
   try{
     if(state.outputType === 'imagem'){
       const encoded = encodeURIComponent(state.finalPrompt.slice(0, 800));
       state.executedImageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+    }else if(state.isResume){
+      const json = await apiPost('/api/execute-resume', { finalPrompt: state.finalPrompt });
+      state.resumeData = json.resumeData;
     }else{
       const json = await apiPost('/api/execute-text', { finalPrompt: state.finalPrompt });
       state.executedResult = json.result;
@@ -927,8 +1047,10 @@ async function executeResult(){
     projectInput: state.projectInput,
     prompt: state.finalPrompt,
     outputType: state.outputType,
+    isResume: state.isResume,
     executedResult: state.executedResult,
     executedImageUrl: state.executedImageUrl,
+    resumeData: state.resumeData,
     hadAttachment: state.attachments.length > 0,
     time: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
   });
@@ -941,38 +1063,57 @@ function renderResult(){
   state.screen = 'result';
   renderTrail();
 
-  const hasExecuted = !!(state.executedResult || state.executedImageUrl);
+  const hasExecuted = !!(state.executedResult || state.executedImageUrl || state.resumeData);
   const quickAction = getQuickAction();
-  const quickActionHtml = quickAction ? `
+  const quickActionHtml = (quickAction && !state.isResume) ? `
     <div class="result-actions">
       <button class="next quick-action" id="quickActionBtn">${quickAction.icon} ${esc(quickAction.label)}</button>
     </div>
   ` : '';
 
+  let readyBlockHtml = '';
+  if(state.outputType === 'imagem'){
+    readyBlockHtml = `
+      <div class="ready-block">
+        <div class="result-label">resultado diz direito</div>
+        ${state.executedImageUrl ? `
+          <img src="${state.executedImageUrl}" alt="Resultado gerado" id="resultImg"
+               style="width:100%;border-radius:12px;border:1px solid var(--panel-border);">
+          <div class="note" id="imgErrorNote" style="display:none;">A geração de imagem gratuita falhou dessa vez (isso pode acontecer, é um serviço de terceiros). <span id="retryImgBtn" style="text-decoration:underline;cursor:pointer;color:var(--cyan);">Tentar de novo</span></div>
+          <div class="result-actions"><button class="ghost" id="downloadBtn">⬇️ Baixar imagem</button></div>
+        ` : '<div class="note">Não consegui gerar a imagem agora — tenta de novo em alguns segundos.</div>'}
+      </div>`;
+  }else if(state.isResume && state.resumeData){
+    readyBlockHtml = `
+      <div class="ready-block">
+        <div class="result-label">currículo pronto</div>
+        <p class="hint" style="margin-bottom:14px;">Seu currículo já foi gerado e formatado. Baixe o PDF pronto pra usar.</p>
+        <div class="result-actions"><button class="next" id="downloadBtn">📄 Baixar currículo em PDF</button></div>
+      </div>`;
+  }else if(state.executedResult){
+    readyBlockHtml = `
+      <div class="ready-block">
+        <div class="result-label">resultado pronto</div>
+        <p class="hint" style="margin-bottom:14px;">Seu resultado já foi gerado. Baixe o arquivo pronto pra usar.</p>
+        <div class="result-actions"><button class="next" id="downloadBtn">⬇️ Baixar resultado em PDF</button></div>
+      </div>`;
+  }else{
+    readyBlockHtml = '<div class="note">Não consegui gerar o resultado agora — o prompt abaixo ainda funciona se você colar em outra IA.</div>';
+  }
+
   cardEl.innerHTML = `
     <div class="result-badge">🎉 projeto concluído</div>
-    <h1>Seu prompt tá <span>pronto</span>.</h1>
-    <p class="hint">Copia e cola direto na IA que você usa, ou veja o resultado que o próprio Diz Direito já gerou pra você. Os campos em destaque são pra você personalizar.</p>
+    <h1>${state.isResume ? 'Seu currículo tá' : (state.outputType === 'imagem' ? 'Sua imagem tá' : 'Seu resultado tá')} <span>pronto</span>.</h1>
+    <p class="hint">Confira abaixo, ou copie o prompt original pra usar em outro lugar. Os campos em destaque são pra você personalizar.</p>
 
-    <div class="executed-section" id="executedSection" style="display:none;">
-      <div class="result-label">resultado diz direito</div>
-      ${state.outputType === 'imagem'
-        ? (state.executedImageUrl
-            ? `<img src="${state.executedImageUrl}" alt="Resultado gerado" style="width:100%;border-radius:12px;border:1px solid var(--panel-border);">`
-            : '<div class="note">Não consegui gerar a imagem agora — tenta de novo em alguns segundos.</div>')
-        : (state.executedResult
-            ? `<div class="output" id="executedText">${esc(state.executedResult)}</div>`
-            : '<div class="note">Não consegui gerar o resultado agora — o prompt abaixo ainda funciona se você colar em outra IA.</div>')
-      }
-      ${hasExecuted ? '<div class="result-actions"><button class="ghost" id="downloadBtn">⬇️ Baixar arquivo</button></div>' : ''}
-    </div>
+    ${readyBlockHtml}
 
-    <div class="output" id="outputText" contenteditable="true" spellcheck="false"></div>
-    <div class="edit-hint">💡 clique no texto acima pra editar os campos destacados antes de copiar</div>
-    ${state.attachments.length > 0 ? '<div class="note">📎 A IA analisou seu(s) anexo(s) pra deixar esse prompt específico pra eles.</div>' : ''}
-    <div class="result-actions">
-      <button class="next" id="resultBtn">✨ Resultado Diz Direto</button>
-    </div>
+    <details style="margin-top:16px;">
+      <summary style="cursor:pointer;color:var(--ink-soft);font-size:13px;font-family:'JetBrains Mono',monospace;">ver o prompt original</summary>
+      <div class="output" id="outputText" contenteditable="true" spellcheck="false" style="margin-top:10px;"></div>
+      <div class="edit-hint">💡 clique no texto acima pra editar antes de copiar</div>
+    </details>
+    ${state.attachments.length > 0 ? '<div class="note">📎 A IA analisou seu(s) anexo(s) pra deixar esse resultado específico pra eles.</div>' : ''}
     ${quickActionHtml}
     <div class="result-actions">
       <button class="ghost" id="copyBtn">Copiar prompt</button>
@@ -995,17 +1136,20 @@ function renderResult(){
   `;
   document.getElementById('outputText').innerHTML = highlightVars(state.finalPrompt);
 
-  const executedSection = document.getElementById('executedSection');
-  const resultBtn = document.getElementById('resultBtn');
-  resultBtn.addEventListener('click', ()=>{
-    const showing = executedSection.style.display !== 'none';
-    executedSection.style.display = showing ? 'none' : 'block';
-    resultBtn.innerHTML = showing ? '✨ Resultado Diz Direto' : '✨ Ocultar resultado';
-    if(!showing) executedSection.scrollIntoView({ behavior:'smooth', block:'nearest' });
-  });
-  if(!hasExecuted){
-    resultBtn.disabled = true;
-    resultBtn.title = 'Resultado indisponível dessa vez';
+  const resultImg = document.getElementById('resultImg');
+  if(resultImg){
+    resultImg.addEventListener('error', ()=>{
+      resultImg.style.display = 'none';
+      document.getElementById('imgErrorNote').style.display = 'block';
+    });
+    const retryBtn = document.getElementById('retryImgBtn');
+    if(retryBtn){
+      retryBtn.addEventListener('click', async ()=>{
+        const encoded = encodeURIComponent(state.finalPrompt.slice(0, 800));
+        state.executedImageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+        renderResult();
+      });
+    }
   }
 
   const downloadBtn = document.getElementById('downloadBtn');
@@ -1017,6 +1161,8 @@ function renderResult(){
       try{
         if(state.outputType === 'imagem' && state.executedImageUrl){
           await downloadImageFile(state.executedImageUrl, 'diz-direito-imagem.jpg');
+        }else if(state.isResume && state.resumeData){
+          downloadResumePDF(state.resumeData, 'curriculo-diz-direito.pdf');
         }else if(state.executedResult){
           downloadTextAsPDF(state.executedResult, 'diz-direito-resultado.pdf');
         }
@@ -1029,12 +1175,7 @@ function renderResult(){
 
   if(quickAction){
     document.getElementById('quickActionBtn').addEventListener('click', ()=>{
-      if(quickAction.type === 'link'){
-        window.open(quickAction.url, '_blank', 'noopener');
-      }else if(quickAction.type === 'download-pdf'){
-        const content = state.executedResult || state.finalPrompt;
-        downloadTextAsPDF(content, 'curriculo-diz-direito.pdf');
-      }
+      window.open(quickAction.url, '_blank', 'noopener');
     });
   }
 
