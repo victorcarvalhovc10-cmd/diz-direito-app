@@ -946,20 +946,63 @@ function downloadTextAsPDF(text, filename){
     const doc = new jsPDF({ unit:'pt', format:'a4' });
     const margin = 48;
     const maxWidth = 500;
-    const lineHeight = 15;
     const pageBottom = 780;
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(11);
     let y = margin;
+
+    const checkBreak = (needed) => { if(y + needed > pageBottom){ doc.addPage(); y = margin; } };
+    const stripInline = (s) => s.replace(/\*\*(.*?)\*\*/g, '$1').replace(/__(.*?)__/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/`(.*?)`/g, '$1');
+
     const paragraphs = text.split('\n');
-    paragraphs.forEach(paragraph=>{
-      const lines = doc.splitTextToSize(paragraph || ' ', maxWidth);
-      lines.forEach(line=>{
-        if(y > pageBottom){ doc.addPage(); y = margin; }
-        doc.text(line, margin, y);
-        y += lineHeight;
-      });
+    paragraphs.forEach(raw=>{
+      const line = raw.trimEnd();
+      const trimmed = line.trim();
+
+      if(trimmed === '' ){ y += 8; return; }
+      if(/^-{3,}$/.test(trimmed)){ checkBreak(10); doc.setDrawColor(200,200,200); doc.line(margin,y,margin+maxWidth,y); y += 12; return; }
+      if(/^\|?[\s:-]+\|[\s:|-]+$/.test(trimmed)) return; // separador de tabela markdown, ignora
+
+      const h3 = trimmed.match(/^###\s+(.*)/);
+      const h2 = trimmed.match(/^##\s+(.*)/);
+      const h1 = trimmed.match(/^#\s+(.*)/);
+      const bullet = trimmed.match(/^[-*]\s+(.*)/);
+      const tableRow = trimmed.match(/^\|(.+)\|$/);
+
+      if(h1 || h2 || h3){
+        const content = stripInline((h1||h2||h3)[1]);
+        checkBreak(26);
+        doc.setFont('Helvetica','bold');
+        doc.setFontSize(h1 ? 16 : h2 ? 13.5 : 12);
+        doc.setTextColor(20,20,20);
+        const lines = doc.splitTextToSize(content, maxWidth);
+        lines.forEach(l=>{ checkBreak(18); doc.text(l, margin, y); y += (h1?20:17); });
+        y += 4;
+        return;
+      }
+
+      if(tableRow){
+        const cells = tableRow[1].split('|').map(c => stripInline(c.trim())).filter((c,i,arr)=> !(arr.every(x=>/^:?-+:?$/.test(x))));
+        const rowText = cells.join('   |   ');
+        doc.setFont('Courier','normal'); doc.setFontSize(9); doc.setTextColor(50,50,50);
+        const lines = doc.splitTextToSize(rowText, maxWidth);
+        lines.forEach(l=>{ checkBreak(13); doc.text(l, margin, y); y += 12; });
+        return;
+      }
+
+      if(bullet){
+        const content = stripInline(bullet[1]);
+        doc.setFont('Helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(40,40,40);
+        const lines = doc.splitTextToSize('•  ' + content, maxWidth-10);
+        lines.forEach(l=>{ checkBreak(14); doc.text(l, margin+6, y); y += 14; });
+        return;
+      }
+
+      // parágrafo normal
+      const content = stripInline(trimmed);
+      doc.setFont('Helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(40,40,40);
+      const lines = doc.splitTextToSize(content, maxWidth);
+      lines.forEach(l=>{ checkBreak(14); doc.text(l, margin, y); y += 14; });
     });
+
     doc.save(filename);
   }catch(e){
     const txtBlob = new Blob([text], { type:'text/plain;charset=utf-8' });

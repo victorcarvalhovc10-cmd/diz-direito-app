@@ -36,7 +36,7 @@ function checkAndConsumeQuota(deviceId) {
 }
 
 // --- helper pra chamar a API da Anthropic ---
-async function callClaude({ system, content, maxTokens = 1400 }) {
+async function callClaude({ system, content, maxTokens = 1400, messages = null }) {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -48,7 +48,7 @@ async function callClaude({ system, content, maxTokens = 1400 }) {
       model: MODEL,
       max_tokens: maxTokens,
       system,
-      messages: [{ role: 'user', content }]
+      messages: messages || [{ role: 'user', content }]
     })
   });
   if (!response.ok) {
@@ -57,7 +57,7 @@ async function callClaude({ system, content, maxTokens = 1400 }) {
   }
   const data = await response.json();
   const block = (data.content || []).find(b => b.type === 'text');
-  return block ? block.text.trim() : '';
+  return { text: block ? block.text.trim() : '', stopReason: data.stop_reason };
 }
 
 // middleware simples de identificação do dispositivo (sem login)
@@ -88,7 +88,7 @@ Caso especial — se o pedido for sobre currículo/CV: as perguntas devem ser pr
 Responda APENAS com JSON válido neste formato exato, sem markdown, sem texto fora do JSON:
 {"project_type": "nome curto do tipo de projeto", "output_type": "imagem", "requires_attachment": true, "attachment_label": "frase curta pedindo o anexo", "questions": [{"id": "slug_curto", "label": "pergunta", "options": [{"label": "opção", "icon": "emoji"}]}]}`;
 
-    const raw = await callClaude({ system, content: projectInput });
+    const { text: raw } = await callClaude({ system, content: projectInput });
     const clean = raw.replace(/```json|```/g, '').trim();
     const json = JSON.parse(clean);
     res.json({ ...json, quotaRemaining: quota.remaining });
@@ -128,7 +128,7 @@ Responda APENAS com o prompt final, texto puro, sem explicações, sem markdown,
         ]
       : textContent;
 
-    const finalPrompt = await callClaude({ system, content });
+    const { text: finalPrompt } = await callClaude({ system, content });
     res.json({ finalPrompt });
   } catch (err) {
     console.error(err);
@@ -139,12 +139,23 @@ Responda APENAS com o prompt final, texto puro, sem explicações, sem markdown,
 app.post('/api/execute-text', async (req, res) => {
   try {
     const { finalPrompt } = req.body;
-    const result = await callClaude({
-      system: 'Responda ao pedido abaixo da melhor forma possível, com qualidade profissional, pronto para uso.',
-      content: finalPrompt,
-      maxTokens: 2000
-    });
-    res.json({ result });
+    const system = 'Responda ao pedido abaixo da melhor forma possível, com qualidade profissional, pronto para uso. Se o conteúdo pedido for extenso (ex: apostila, guia completo, material longo), pode escrever bastante — não resuma demais.';
+    const messages = [{ role: 'user', content: finalPrompt }];
+    let fullText = '';
+    let stopReason = null;
+    const MAX_ROUNDS = 6;
+
+    for (let round = 0; round < MAX_ROUNDS; round++) {
+      const { text, stopReason: sr } = await callClaude({ system, messages, maxTokens: 8000 });
+      fullText += text;
+      stopReason = sr;
+      if (stopReason !== 'max_tokens') break;
+      // pede pra continuar exatamente de onde parou
+      messages.push({ role: 'assistant', content: text });
+      messages.push({ role: 'user', content: 'Continue exatamente de onde parou, sem repetir o que já foi escrito e sem reintroduzir o assunto.' });
+    }
+
+    res.json({ result: fullText, truncated: stopReason === 'max_tokens' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'erro_interno', message: 'Não consegui gerar o resultado. Tenta de novo.' });
@@ -158,7 +169,7 @@ app.post('/api/execute-resume', async (req, res) => {
 Para campos de dado pessoal que não foram informados (nome, e-mail, telefone), use um placeholder entre colchetes, ex: [Seu nome], [seu@email.com].
 Responda APENAS com JSON válido, compacto, sem markdown, sem comentários, neste formato exato:
 {"name":"...", "title":"...", "contact":"...", "summary":"...", "experience":[{"role":"...","company":"...","period":"...","bullets":["...","..."]}], "education":[{"degree":"...","institution":"...","period":"..."}], "skills":["...","..."]}`;
-    const raw = await callClaude({ system, content: finalPrompt, maxTokens: 3500 });
+    const { text: raw } = await callClaude({ system, content: finalPrompt, maxTokens: 3500 });
     let clean = raw.replace(/```json|```/g, '').trim();
     // se vier algum texto extra antes/depois do JSON, recorta só o objeto
     const firstBrace = clean.indexOf('{');
