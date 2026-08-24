@@ -143,7 +143,7 @@ app.post('/api/execute-text', async (req, res) => {
     const messages = [{ role: 'user', content: finalPrompt }];
     let fullText = '';
     let stopReason = null;
-    const MAX_ROUNDS = 6;
+    const MAX_ROUNDS = 4;
 
     for (let round = 0; round < MAX_ROUNDS; round++) {
       const { text, stopReason: sr } = await callClaude({ system, messages, maxTokens: 8000 });
