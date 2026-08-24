@@ -619,11 +619,14 @@ async function startFlow(){
     state.outputType = json.output_type === 'imagem' ? 'imagem' : 'texto';
     state.attachmentLabel = json.attachment_label || 'Anexe um arquivo de referência';
 
-    // se o projeto for currículo, garante uma pergunta visual de layout
+    // se o projeto for currículo, garante uma pergunta visual de layout e força saída como texto/PDF
     const isCurriculo = /curr[íi]culo|resume|\bcv\b/i.test(state.projectType + ' ' + val);
     state.isResume = isCurriculo;
-    if(isCurriculo && !state.questions.some(q => q.id === 'layout_curriculo')){
-      state.questions.push(LAYOUT_CURRICULO_QUESTION);
+    if(isCurriculo){
+      state.outputType = 'texto'; // currículo nunca deve ser roteado pra geração de imagem
+      if(!state.questions.some(q => q.id === 'layout_curriculo')){
+        state.questions.push(LAYOUT_CURRICULO_QUESTION);
+      }
     }
 
     state.stepIndex = 0;
@@ -918,6 +921,10 @@ function downloadResumePDF(data, filename){
   }
 }
 
+function randomImageSeed(){
+  return Math.floor(Math.random() * 2147483647);
+}
+
 function downloadBlob(blob, filename){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -963,8 +970,9 @@ async function downloadImageFile(url, filename){
     if(!response.ok) throw new Error('falha ao buscar imagem');
     const blob = await response.blob();
     downloadBlob(blob, filename);
+    return true;
   }catch(e){
-    window.open(url, '_blank', 'noopener');
+    return false;
   }
 }
 
@@ -1031,7 +1039,7 @@ async function executeResult(){
   try{
     if(state.outputType === 'imagem'){
       const encoded = encodeURIComponent(state.finalPrompt.slice(0, 800));
-      state.executedImageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+      state.executedImageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${randomImageSeed()}`;
     }else if(state.isResume){
       const json = await apiPost('/api/execute-resume', { finalPrompt: state.finalPrompt });
       state.resumeData = json.resumeData;
@@ -1146,7 +1154,7 @@ function renderResult(){
     if(retryBtn){
       retryBtn.addEventListener('click', async ()=>{
         const encoded = encodeURIComponent(state.finalPrompt.slice(0, 800));
-        state.executedImageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+        state.executedImageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${randomImageSeed()}`;
         renderResult();
       });
     }
@@ -1160,7 +1168,14 @@ function renderResult(){
       downloadBtn.innerHTML = 'Baixando...';
       try{
         if(state.outputType === 'imagem' && state.executedImageUrl){
-          await downloadImageFile(state.executedImageUrl, 'diz-direito-imagem.jpg');
+          const ok = await downloadImageFile(state.executedImageUrl, 'diz-direito-imagem.jpg');
+          if(!ok){
+            const note = document.getElementById('imgErrorNote');
+            if(note){
+              note.style.display = 'block';
+              note.innerHTML = 'Não consegui baixar automaticamente. Clique com o botão direito na imagem acima e escolha "Salvar imagem como...".';
+            }
+          }
         }else if(state.isResume && state.resumeData){
           downloadResumePDF(state.resumeData, 'curriculo-diz-direito.pdf');
         }else if(state.executedResult){
