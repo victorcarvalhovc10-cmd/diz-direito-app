@@ -384,7 +384,12 @@
 </div>
 
 <script>
-  // Verifica se o usuário acabou de voltar de um pagamento aprovado do Mercado Pago
+  // Função que direciona o cliente para o link oficial de assinatura do Mercado Pago
+  function assinarPlano() {
+    window.location.href = 'https://mpago.la/1QJWxMQ';
+  }
+
+  // Verifica se o usuário acabou de voltar de um pagamento aprovado
   window.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const status = urlParams.get('status') || urlParams.get('collection_status');
@@ -400,7 +405,7 @@
       alert('🎉 Pagamento aprovado com sucesso! Seu acesso ilimitado por 30 dias está ativo.');
     }
 
-    // Verifica se o usuário já é assinante ativo
+    // Verifica validade do acesso
     const statusAssinatura = localStorage.getItem('dizDireitoAssinante');
     const validade = localStorage.getItem('dizDireitoValidade');
 
@@ -419,24 +424,6 @@
       }
     }
   });
-
-  async function assinarPlano() {
-    try {
-      const response = await fetch('/api/pagar', {
-        method: 'POST',
-      });
-      const data = await response.json();
-      
-      if (data.init_point) {
-        window.location.href = data.init_point;
-      } else {
-        alert('Erro ao iniciar o pagamento.');
-      }
-    } catch (error) {
-      console.error(error);
-      alert('Erro de conexão.');
-    }
-  }
 </script>
 </div>
 
