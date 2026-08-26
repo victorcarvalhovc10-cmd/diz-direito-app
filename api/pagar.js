@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     const accessToken = process.env.MP_ACCESS_TOKEN;
     
     if (!accessToken) {
-      return res.status(500).json({ error: 'Token do Mercado Pago não configurado.' });
+      return res.status(500).json({ error: 'Token MP_ACCESS_TOKEN ausente nas variáveis de ambiente da Vercel.' });
     }
 
     const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         items: [
           {
-            title: 'Assinatura / Créditos - Diz Direito',
+            title: 'Assinatura - Diz Direito',
             quantity: 1,
             unit_price: 19.90,
             currency_id: 'BRL'
@@ -39,11 +39,11 @@ export default async function handler(req, res) {
     if (data.init_point) {
       return res.status(200).json({ init_point: data.init_point });
     } else {
-      console.error('Erro MP:', data);
-      return res.status(400).json({ error: 'Erro ao gerar preferência', details: data });
+      console.error('Erro retornado pelo Mercado Pago:', data);
+      return res.status(400).json({ error: 'Erro do Mercado Pago', details: data });
     }
   } catch (error) {
     console.error('Erro interno:', error);
-    return res.status(500).json({ error: 'Erro interno no servidor' });
+    return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
   }
 }
