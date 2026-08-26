@@ -384,6 +384,42 @@
 </div>
 
 <script>
+  // Verifica se o usuário acabou de voltar de um pagamento aprovado do Mercado Pago
+  window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('status') || urlParams.get('collection_status');
+
+    if (status === 'approved') {
+      const dataExpiracao = new Date();
+      dataExpiracao.setDate(dataExpiracao.getDate() + 30);
+      
+      localStorage.setItem('dizDireitoAssinante', 'ativo');
+      localStorage.setItem('dizDireitoValidade', dataExpiracao.toISOString());
+
+      window.history.replaceState({}, document.title, window.location.pathname);
+      alert('🎉 Pagamento aprovado com sucesso! Seu acesso ilimitado por 30 dias está ativo.');
+    }
+
+    // Verifica se o usuário já é assinante ativo
+    const statusAssinatura = localStorage.getItem('dizDireitoAssinante');
+    const validade = localStorage.getItem('dizDireitoValidade');
+
+    if (statusAssinatura === 'ativo' && validade) {
+      const hoje = new Date();
+      if (new Date(validade) > hoje) {
+        const botaoAssinar = document.querySelector('button[onclick="assinarPlano()"]');
+        if (botaoAssinar) {
+          botaoAssinar.innerText = '⭐ Assinatura Ativa (Ilimitado)';
+          botaoAssinar.style.background = '#28a745';
+          botaoAssinar.style.color = '#fff';
+        }
+      } else {
+        localStorage.removeItem('dizDireitoAssinante');
+        localStorage.removeItem('dizDireitoValidade');
+      }
+    }
+  });
+
   async function assinarPlano() {
     try {
       const response = await fetch('/api/pagar', {
