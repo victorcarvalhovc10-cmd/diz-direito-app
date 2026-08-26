@@ -361,6 +361,17 @@
   .dest .dnote{ font-size:12px; color: var(--ink-soft); margin-top:2px; }
   .dest .arrow{ color: var(--cyan); font-size:16px; }
 
+  .subscribe-btn{
+    background: transparent; color: var(--ink-soft); border: 1px solid var(--panel-border);
+    padding: 9px 18px; border-radius: 100px; font-family:'Space Grotesk', sans-serif;
+    font-weight: 600; font-size: 13px; cursor: pointer; transition: all .15s ease;
+  }
+  .subscribe-btn:hover{ border-color: var(--violet); color: var(--ink); }
+  .subscribe-active{
+    background: linear-gradient(120deg, #22C55E, #16A34A) !important;
+    color: #fff !important; border-color: transparent !important;
+  }
+
   footer{
     text-align:center; margin-top:26px;
     font-family:'JetBrains Mono', monospace; font-size:11.5px; color: #514F68;
@@ -369,66 +380,55 @@
 </head>
 <body>
 <div class="app">
-  <div class="brand" style="text-align: center; margin-bottom: 20px;">
-  <!-- 1. Logo Oficial -->
-  <img src="/logo.svg" alt="Diz Direito" style="height: 60px; width: auto; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;">
-  
-  <!-- 2. SEU NOVO PUG REAL (Centralizado e Redondo) -->
-  <img src="pug.png" alt="Mascote Pug" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.1); display: block; margin-left: auto; margin-right: auto;">
-</div>
+  <div class="brand">
+    <div class="logo"><img src="/logo.svg" alt="Diz Direito" style="height:150px;width:auto;max-width:100%;"></div>
+    <button class="hist-btn" id="histBtn">🕘 Histórico <span class="badge" id="histBadge" style="display:none;">0</span></button>
+  </div>
   <div class="trail" id="trail"></div>
   <div class="card" id="card"><!-- injected --></div>
   <footer>protótipo de validação · powered by IA</footer>
-<!-- Botão Seja um Assinante no rodapé -->
-<div style="text-align: center; margin: 30px 0 10px 0;">
-  <button onclick="assinarPlano()" style="background: transparent; color: var(--ink-soft); border: 1px solid var(--panel-border); padding: 8px 16px; border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 13px; transition: all 0.2s;">
-    ⭐ Seja um Assinante
-  </button>
+
+  <div style="text-align:center; margin:22px 0 6px;">
+    <button id="subscribeBtn" onclick="assinarPlano()" class="subscribe-btn">⭐ Seja um Assinante</button>
+  </div>
 </div>
 
 <script>
-  // Função que direciona o cliente para o link oficial de assinatura do Mercado Pago
-  function assinarPlano() {
+  // Direciona pro link oficial de assinatura no Mercado Pago
+  function assinarPlano(){
     window.location.href = 'https://mpago.la/1QJWxMQ';
   }
 
-  // Verifica se o usuário acabou de voltar de um pagamento aprovado
   window.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const status = urlParams.get('status') || urlParams.get('collection_status');
 
-    if (status === 'approved') {
+    if(status === 'approved'){
       const dataExpiracao = new Date();
       dataExpiracao.setDate(dataExpiracao.getDate() + 30);
-      
       localStorage.setItem('dizDireitoAssinante', 'ativo');
       localStorage.setItem('dizDireitoValidade', dataExpiracao.toISOString());
-
       window.history.replaceState({}, document.title, window.location.pathname);
       alert('🎉 Pagamento aprovado com sucesso! Seu acesso ilimitado por 30 dias está ativo.');
     }
 
-    // Verifica validade do acesso
     const statusAssinatura = localStorage.getItem('dizDireitoAssinante');
     const validade = localStorage.getItem('dizDireitoValidade');
+    const botaoAssinar = document.getElementById('subscribeBtn');
 
-    if (statusAssinatura === 'ativo' && validade) {
-      const hoje = new Date();
-      if (new Date(validade) > hoje) {
-        const botaoAssinar = document.querySelector('button[onclick="assinarPlano()"]');
-        if (botaoAssinar) {
+    if(statusAssinatura === 'ativo' && validade){
+      if(new Date(validade) > new Date()){
+        if(botaoAssinar){
           botaoAssinar.innerText = '⭐ Assinatura Ativa (Ilimitado)';
-          botaoAssinar.style.background = '#28a745';
-          botaoAssinar.style.color = '#fff';
+          botaoAssinar.classList.add('subscribe-active');
         }
-      } else {
+      }else{
         localStorage.removeItem('dizDireitoAssinante');
         localStorage.removeItem('dizDireitoValidade');
       }
     }
   });
 </script>
-</div>
 
 <script>
 const state = { screen: 'start', projectInput: '', projectType: '', outputType: 'texto', isResume: false, questions: [], stepIndex: 0, answers: {}, finalPrompt: '', requiresAttachment: false, attachmentLabel: '', attachments: [], history: [], executedResult: '', executedImageUrl: '', resumeData: null };
@@ -571,43 +571,7 @@ function renderStart(){
         </div>
         <div class="thought-bubble" id="pugThought">Vamos criar algo incrível!</div>
         <div class="pug-face">
-          <svg width="210" height="153" viewBox="0 0 460 335" fill="none">
-            <defs>
-              <radialGradient id="faceGrad" cx="45%" cy="35%" r="70%">
-                <stop offset="0%" stop-color="#E8CBA0"/>
-                <stop offset="100%" stop-color="#D2A874"/>
-              </radialGradient>
-            </defs>
-            <g transform="translate(100,10)">
-              <path d="M40 70c-30-38-95-30-98 18-3 42 38 68 82 58z" fill="#2B2019"/>
-              <path d="M46 78c-20-24-62-18-63 12-2 27 24 44 53 37z" fill="#3E2E22"/>
-              <path d="M260 66c32-36 96-24 96 24 0 42-40 66-84 54z" fill="#2B2019"/>
-              <path d="M255 74c22-22 63-14 62 15-1 26-27 42-56 34z" fill="#3E2E22"/>
-              <ellipse cx="150" cy="170" rx="150" ry="145" fill="url(#faceGrad)"/>
-              <path d="M62 100c22-20 55-30 88-30s66 10 88 30" stroke="#BB8F5E" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.55"/>
-              <path d="M50 130c26-16 62-24 100-24s74 8 100 24" stroke="#BB8F5E" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.4"/>
-              <path d="M120 92c8 18 6 40-4 58M180 92c-8 18-6 40 4 58" stroke="#BB8F5E" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.5"/>
-              <path d="M150 95c-46 0-76 34-84 70-9 40 8 78 44 96 24 12 56 12 80 0 36-18 53-56 44-96-8-36-38-70-84-70z" fill="#241a14"/>
-              <path d="M150 108c-38 0-64 28-71 58-8 33 6 63 37 78 20 10 48 10 68 0 31-15 45-45 37-78-7-30-33-58-71-58z" fill="#33251c" opacity="0.65"/>
-              <ellipse cx="150" cy="185" rx="34" ry="24" fill="#0F0B08"/>
-              <ellipse cx="138" cy="176" rx="7" ry="4" fill="#4A3B30" opacity="0.8"/>
-              <path d="M150 205v14" stroke="#0F0B08" stroke-width="4" stroke-linecap="round"/>
-              <path d="M150 219c-16 14-36 14-52 4M150 219c16 14 36 14 52 4" stroke="#0F0B08" stroke-width="4" stroke-linecap="round" fill="none"/>
-              <g class="pug-eye eye-a">
-                <ellipse cx="104" cy="150" rx="22" ry="25" fill="#140E0A"/>
-                <ellipse cx="112" cy="140" rx="7" ry="8" fill="#FFFFFF" opacity="0.85"/>
-                <ellipse cx="98" cy="158" rx="5" ry="5" fill="#3A2A20" opacity="0.6"/>
-              </g>
-              <g class="pug-eye eye-b">
-                <ellipse cx="196" cy="150" rx="22" ry="25" fill="#140E0A"/>
-                <ellipse cx="204" cy="140" rx="7" ry="8" fill="#FFFFFF" opacity="0.85"/>
-                <ellipse cx="190" cy="158" rx="5" ry="5" fill="#3A2A20" opacity="0.6"/>
-              </g>
-              <path d="M78 128c10-10 26-13 38-6M182 122c12-7 28-4 38 6" stroke="#A97F52" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.55"/>
-              <ellipse cx="60" cy="205" rx="30" ry="22" fill="#C29B6C" opacity="0.35"/>
-              <ellipse cx="240" cy="205" rx="30" ry="22" fill="#C29B6C" opacity="0.35"/>
-            </g>
-          </svg>
+          <img src="/pug-real.png" alt="Mascote Pug" style="width:210px;height:210px;border-radius:50%;object-fit:cover;display:block;box-shadow:0 8px 24px rgba(0,0,0,0.4);border:2px solid rgba(255,255,255,0.08);">
         </div>
       </div>
     </div>
