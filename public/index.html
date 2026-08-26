@@ -368,15 +368,23 @@
 </style>
 </head>
 <body>
-<!-- Botão de Créditos - Diz Direito -->
-<div style="text-align: center; margin: 15px 0;">
-  <button onclick="comprarCreditos()" style="background: #009ee3; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(0,158,227,0.3);">
-    💳 Comprar 50 Créditos (R$ 19,90)
+<div class="app">
+  <div class="brand">
+    <div class="logo"><img src="/logo.svg" alt="Diz Direito" style="height:150px;width:auto;max-width:100%;"></div>
+    <button class="hist-btn" id="histBtn">🕘 Histórico <span class="badge" id="histBadge" style="display:none;">0</span></button>
+  </div>
+  <div class="trail" id="trail"></div>
+  <div class="card" id="card"><!-- injected --></div>
+  <footer>protótipo de validação · powered by IA</footer>
+<!-- Botão Seja um Assinante no rodapé -->
+<div style="text-align: center; margin: 30px 0 10px 0;">
+  <button onclick="assinarPlano()" style="background: transparent; color: var(--ink-soft); border: 1px solid var(--panel-border); padding: 8px 16px; border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 13px; transition: all 0.2s;">
+    ⭐ Seja um Assinante
   </button>
 </div>
 
 <script>
-  async function comprarCreditos() {
+  async function assinarPlano() {
     try {
       const response = await fetch('/api/pagar', {
         method: 'POST',
@@ -386,22 +394,14 @@
       if (data.init_point) {
         window.location.href = data.init_point;
       } else {
-        alert('Erro ao iniciar o pagamento. Tente novamente.');
+        alert('Erro ao iniciar o pagamento.');
       }
     } catch (error) {
       console.error(error);
-      alert('Erro de conexão com o servidor.');
+      alert('Erro de conexão.');
     }
   }
 </script>
-<div class="app">
-  <div class="brand">
-    <div class="logo"><img src="/logo.svg" alt="Diz Direito" style="height:150px;width:auto;max-width:100%;"></div>
-    <button class="hist-btn" id="histBtn">🕘 Histórico <span class="badge" id="histBadge" style="display:none;">0</span></button>
-  </div>
-  <div class="trail" id="trail"></div>
-  <div class="card" id="card"><!-- injected --></div>
-  <footer>protótipo de validação · powered by IA</footer>
 </div>
 
 <script>
