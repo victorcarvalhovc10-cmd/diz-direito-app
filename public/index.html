@@ -14,6 +14,7 @@
 
   :root{
     --bg: #0A0B14;
+    --bg2: #10121F;
     --panel: rgba(255,255,255,0.045);
     --panel-border: rgba(255,255,255,0.09);
     --ink: #EDEBF7;
@@ -23,10 +24,12 @@
     --pink: #F472B6;
     --grad: linear-gradient(120deg, var(--violet), var(--cyan));
   }
+
   *{ box-sizing: border-box; }
-  html, body{ height:100%; }
+
   body{
     margin:0;
+    min-height:100vh;
     background:
       radial-gradient(circle at 15% 0%, rgba(139,92,246,0.16), transparent 45%),
       radial-gradient(circle at 85% 20%, rgba(34,211,238,0.12), transparent 40%),
@@ -35,189 +38,713 @@
     font-family: 'Inter', sans-serif;
     display:flex;
     justify-content:center;
+    padding: 40px 18px 80px;
   }
 
-  .app{ width:100%; max-width: 640px; display:flex; flex-direction:column; height:100vh; }
+  .mascot-wrap{
+    display:flex; justify-content:center; margin: 6px 0 28px;
+    position: relative;
+  }
+  .mascot-track{
+    width: 230px; height: 195px; position: relative;
+  }
+  .pug-face{
+    position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+  }
+  .pug-eye{
+    animation: blink 4.5s ease-in-out infinite;
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+  .pug-eye.eye-b{ animation-delay: 0.05s; }
+  @keyframes blink{
+    0%, 92%, 100%{ transform: scaleY(1); }
+    95%{ transform: scaleY(0.1); }
+  }
+  .idea-bulb{
+    position:absolute; top:-18px; left:50%; transform:translateX(-50%);
+    opacity:0; animation: idea-cycle 7s ease-in-out infinite;
+  }
+  @keyframes idea-cycle{
+    0%, 8%{ opacity:0; transform:translateX(-50%) translateY(4px) scale(0.8); }
+    18%, 42%{ opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+    52%, 100%{ opacity:0; transform:translateX(-50%) translateY(4px) scale(0.8); }
+  }
+  .thought-bubble{
+    position:absolute; top:-12px; left:50%; transform:translateX(56px);
+    opacity:0; animation: thought-cycle 7s ease-in-out infinite;
+    background: var(--panel); border:1px solid var(--panel-border);
+    border-radius: 10px; padding:6px 10px; white-space:nowrap;
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft);
+    backdrop-filter: blur(8px);
+  }
+  @keyframes thought-cycle{
+    0%, 55%{ opacity:0; transform:translateX(56px) translateY(4px); }
+    65%, 90%{ opacity:1; transform:translateX(56px) translateY(0); }
+    98%, 100%{ opacity:0; transform:translateX(56px) translateY(4px); }
+  }
+
+  .app{ width:100%; max-width: 560px; }
 
   .brand{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--panel-border);
-    flex-shrink:0;
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    flex-wrap: wrap;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600; font-size:15px;
+    color: var(--ink-soft);
+    margin-bottom: 30px;
   }
-  .brand img{ height:38px; width:auto; }
-  .new-chat-btn{
+  .brand .logo{ display:flex; align-items:center; gap:10px; }
+  .brand .dot{ width:8px; height:8px; border-radius:50%; background: var(--grad); box-shadow: 0 0 12px var(--violet); }
+  .hist-btn{
     font-family:'JetBrains Mono', monospace; font-size:12px;
     background: none; border: 1px solid var(--panel-border); color: var(--ink-soft);
     padding: 7px 12px; border-radius: 100px; cursor:pointer;
+    display:flex; align-items:center; gap:6px;
   }
-  .new-chat-btn:hover{ border-color: var(--violet); color: var(--ink); }
+  .hist-btn:hover{ border-color: var(--violet); color: var(--ink); }
+  .hist-btn .badge{
+    background: var(--grad); color:#0A0B14; font-size:10.5px; font-weight:700;
+    border-radius:100px; padding:1px 6px;
+  }
+
+  .hist-item{
+    padding: 14px; border-radius: 12px; border: 1px solid var(--panel-border);
+    background: rgba(255,255,255,0.025); margin-bottom:10px; cursor:pointer;
+    transition: all .15s ease;
+  }
+  .hist-item:hover{ border-color: var(--violet); }
+  .hist-item .htype{ font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:14px; margin-bottom:4px; }
+  .hist-item .hpreview{ font-size:12.5px; color: var(--ink-soft); overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .hist-item .htime{ font-family:'JetBrains Mono', monospace; font-size:10.5px; color:#5F5C77; margin-top:6px; }
+  .hist-empty{ color: var(--ink-soft); font-size:14px; text-align:center; padding: 40px 10px; }
+
+  /* progress trail */
+  .trail{
+    display:flex; align-items:center; gap:6px;
+    margin-bottom: 30px;
+  }
+  .trail .seg{
+    flex:1; height:4px; border-radius:4px;
+    background: rgba(255,255,255,0.08);
+    overflow:hidden;
+  }
+  .trail .seg .fill{
+    height:100%; width:0%; background: var(--grad);
+    transition: width .5s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 0 8px var(--violet);
+  }
+  .trail .seg.done .fill{ width:100%; }
+  .trail .seg.current .fill{ width:55%; }
+
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(18px);
+    border-radius: 20px;
+    padding: 32px 28px;
+    min-height: 360px;
+    display:flex; flex-direction:column;
+    animation: rise .4s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes rise{ from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:translateY(0);} }
+
+  .kicker{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 11.5px; letter-spacing:.1em; text-transform:uppercase;
+    color: var(--cyan);
+    margin-bottom: 10px;
+  }
+
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size: 27px; font-weight:700; line-height:1.15;
+    margin: 0 0 8px;
+  }
+  h1 span{ background: var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+
+  .hint{ color: var(--ink-soft); font-size: 14.5px; line-height:1.5; margin-bottom:22px; }
+
+  textarea, input[type=text]{
+    width:100%;
+    font-family:'Inter', sans-serif;
+    font-size: 15px;
+    padding: 15px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--panel-border);
+    background: rgba(255,255,255,0.03);
+    color: var(--ink);
+    outline:none;
+    resize: vertical;
+  }
+  textarea{ min-height: 96px; }
+  textarea:focus, input[type=text]:focus{ border-color: var(--violet); box-shadow: 0 0 0 3px rgba(139,92,246,0.18); }
+  textarea::placeholder, input::placeholder{ color:#5F5C77; }
+
+  .options{
+    display:grid; grid-template-columns: 1fr 1fr; gap:10px;
+    margin-top: 4px;
+  }
+  .opt{
+    display:flex; align-items:center; gap:9px;
+    padding: 13px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--panel-border);
+    background: rgba(255,255,255,0.025);
+    cursor:pointer;
+    font-size: 14px;
+    transition: all .15s ease;
+  }
+  .opt .ic{ font-size: 18px; }
+  .opt:hover{ border-color: rgba(139,92,246,0.5); }
+  .opt.sel{
+    border-color: var(--violet);
+    background: linear-gradient(120deg, rgba(139,92,246,0.18), rgba(34,211,238,0.1));
+    box-shadow: 0 0 0 1px var(--violet), 0 0 20px rgba(139,92,246,0.25);
+  }
+  .opt.custom{ grid-column: 1 / -1; }
+  .opt-visual{ flex-direction:column; align-items:flex-start; gap:8px; padding:10px; }
+  .opt-visual .ic-visual{ align-self:center; }
+  .opt-visual .ic-visual svg{ display:block; }
+  .opt-visual span:last-child{ font-size:12.5px; text-align:center; width:100%; }
+
+  .grow{ flex:1; }
+
+  .nav{ display:flex; justify-content:space-between; align-items:center; margin-top:24px; }
+
+  button.next, button.start{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600; font-size: 14.5px;
+    background: var(--grad);
+    color: #0A0B14;
+    border:none; padding: 13px 24px; border-radius: 11px;
+    cursor:pointer;
+    display:flex; align-items:center; gap:8px;
+    transition: transform .12s ease, filter .15s ease;
+  }
+  button.next:hover, button.start:hover{ filter: brightness(1.08); }
+  button.next:active, button.start:active{ transform: scale(0.97); }
+  button.next:disabled{ opacity:.4; cursor:default; }
+
+  button.back{
+    background:none; border:none; color: var(--ink-soft);
+    font-family:'Inter', sans-serif; font-size:14px; cursor:pointer;
+  }
+  button.back:hover{ color: var(--ink); }
+
+  .spinner{
+    width:15px; height:15px; border-radius:50%;
+    border: 2px solid rgba(10,11,20,0.25); border-top-color:#0A0B14;
+    animation: spin .7s linear infinite; display:none;
+  }
+  .loading .spinner{ display:inline-block; }
+  @keyframes spin{ to{ transform: rotate(360deg);} }
+
+  .error{ color: var(--pink); font-size:13.5px; margin-top:12px; display:none; }
+  .error.show{ display:block; }
+
+  /* result screen */
+  .quick-action{
+    background: linear-gradient(120deg, var(--cyan), var(--violet));
+  }
+
+  .ready-block{
+    margin-bottom: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--violet);
+    background: linear-gradient(120deg, rgba(139,92,246,0.08), rgba(34,211,238,0.05));
+  }
+
+  .executed-section{
+    margin-bottom: 16px;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--violet);
+    background: linear-gradient(120deg, rgba(139,92,246,0.08), rgba(34,211,238,0.05));
+  }
+
+  .result-badge{
+    align-self:flex-start;
+    font-family:'JetBrains Mono', monospace; font-size:11.5px;
+    color:#0A0B14; background: var(--grad);
+    padding:5px 12px; border-radius: 100px; margin-bottom:16px;
+  }
+  .output{
+    font-family:'JetBrains Mono', monospace; font-size:14px; line-height:1.7;
+    white-space: pre-wrap;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px; padding: 18px;
+    flex:1;
+    outline: none;
+  }
+  .output:focus{ border-color: var(--violet); box-shadow: 0 0 0 3px rgba(139,92,246,0.14); }
+  .output .var{
+    color: var(--cyan); background: rgba(34,211,238,0.14);
+    padding:1px 4px; border-radius:3px;
+    border-bottom: 1px dashed var(--cyan);
+  }
+  .edit-hint{ font-size:12px; color: var(--ink-soft); margin-top:8px; }
+
+  .result-actions{ display:flex; gap:10px; margin-top:16px; }
+  button.ghost{
+    font-family:'Space Grotesk', sans-serif; font-size:13.5px;
+    background: transparent; border:1px solid var(--panel-border); color: var(--ink);
+    padding:11px 18px; border-radius:10px; cursor:pointer;
+  }
+  button.ghost:hover{ border-color: var(--violet); }
+
+  .dropzone-compact{
+    padding: 14px 16px;
+    display:flex; flex-direction:row; align-items:center; gap:10px;
+    margin-top: 14px;
+    text-align:left;
+  }
+  .dropzone-compact .ic{ font-size:18px; margin-bottom:0; }
+  .dropzone-compact .label{ font-size:13px; }
+  .attach-chips{
+    display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;
+  }
+  .attach-chip{
+    display:flex; align-items:center; gap:6px;
+    background: rgba(255,255,255,0.04); border:1px solid var(--panel-border);
+    border-radius: 100px; padding: 4px 10px 4px 4px;
+  }
+  .attach-chip img{ width:24px; height:24px; border-radius:50%; object-fit:cover; }
+  .attach-chip-file{ font-size:16px; width:24px; text-align:center; }
+  .attach-chip-name{ font-size:12px; color: var(--ink-soft); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .attach-chip-remove{
+    background:none; border:none; color: var(--ink-soft); cursor:pointer; font-size:12px; padding:2px;
+  }
+  .attach-chip-remove:hover{ color: var(--pink); }
+
+  .dropzone{
+    border: 1.5px dashed var(--panel-border);
+    border-radius: 14px;
+    padding: 30px 18px;
+    text-align:center;
+    cursor:pointer;
+    background: rgba(255,255,255,0.02);
+    transition: all .15s ease;
+  }
+  .dropzone:hover, .dropzone.drag{ border-color: var(--violet); background: rgba(139,92,246,0.06); }
+  .dropzone .ic{ font-size: 30px; display:block; margin-bottom:10px; }
+  .dropzone .label{ font-size:14px; color: var(--ink-soft); }
+  .dropzone input{ display:none; }
+  .preview{ margin-top:16px; display:flex; align-items:center; gap:12px; }
+  .preview img{ width:64px; height:64px; object-fit:cover; border-radius:10px; border:1px solid var(--panel-border); }
+  .preview .name{ font-size:13px; color: var(--ink-soft); }
+  .note{
+    font-family:'JetBrains Mono', monospace; font-size:12.5px; line-height:1.6;
+    color: var(--ink-soft); background: rgba(255,255,255,0.03);
+    border-left: 2px solid var(--cyan); border-radius: 4px 10px 10px 4px;
+    padding: 12px 14px; margin-top:14px;
+  }
+
+  .destinations{ margin-top:18px; }
+  .destinations .dlabel{
+    font-family:'JetBrains Mono', monospace; font-size:11.5px; letter-spacing:.08em; text-transform:uppercase;
+    color: var(--ink-soft); margin-bottom:10px;
+  }
+  .dest-list{ display:flex; flex-direction:column; gap:8px; }
+  .dest{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding: 12px 14px; border-radius: 12px;
+    border: 1px solid var(--panel-border);
+    background: rgba(255,255,255,0.025);
+    text-decoration:none; color: var(--ink);
+    transition: all .15s ease;
+  }
+  .dest:hover{ border-color: var(--violet); background: rgba(139,92,246,0.08); }
+  .dest .dname{ font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:14px; display:flex; align-items:center; gap:8px; }
+  .dest .dnote{ font-size:12px; color: var(--ink-soft); margin-top:2px; }
+  .dest .arrow{ color: var(--cyan); font-size:16px; }
+
   .subscribe-btn{
     background: transparent; color: var(--ink-soft); border: 1px solid var(--panel-border);
-    padding: 7px 12px; border-radius: 100px; font-family:'JetBrains Mono', monospace;
-    font-weight: 500; font-size: 11.5px; cursor: pointer; transition: all .15s ease;
+    padding: 9px 18px; border-radius: 100px; font-family:'Space Grotesk', sans-serif;
+    font-weight: 600; font-size: 13px; cursor: pointer; transition: all .15s ease;
   }
   .subscribe-btn:hover{ border-color: var(--violet); color: var(--ink); }
   .subscribe-active{
     background: linear-gradient(120deg, #22C55E, #16A34A) !important;
     color: #fff !important; border-color: transparent !important;
   }
-  .brand-actions{ display:flex; align-items:center; gap:8px; }
 
-  .chat-log{
-    flex:1; overflow-y:auto; padding: 18px 16px 8px;
-    display:flex; flex-direction:column; gap:16px;
+  footer{
+    text-align:center; margin-top:26px;
+    font-family:'JetBrains Mono', monospace; font-size:11.5px; color: #514F68;
   }
-
-  .msg-row{ display:flex; gap:10px; align-items:flex-start; max-width:100%; }
-  .msg-row.user{ flex-direction:row-reverse; }
-  .avatar{ width:32px; height:32px; border-radius:50%; object-fit:cover; flex-shrink:0; margin-top:2px; }
-  .bubble{
-    background: var(--panel); border:1px solid var(--panel-border);
-    border-radius: 14px; padding: 12px 14px; font-size:14.5px; line-height:1.55;
-    max-width: 82%;
-  }
-  .msg-row.user .bubble{
-    background: linear-gradient(120deg, rgba(139,92,246,0.22), rgba(34,211,238,0.14));
-    border-color: rgba(139,92,246,0.4);
-  }
-  .bubble.wide{ max-width:100%; width:100%; }
-
-  .typing{ display:flex; gap:4px; padding:4px 0; }
-  .typing span{ width:6px; height:6px; border-radius:50%; background: var(--ink-soft); animation: bounce 1.2s infinite ease-in-out; }
-  .typing span:nth-child(2){ animation-delay:0.15s; }
-  .typing span:nth-child(3){ animation-delay:0.3s; }
-  @keyframes bounce{ 0%,60%,100%{ transform:translateY(0); opacity:.5; } 30%{ transform:translateY(-4px); opacity:1; } }
-
-  .opt-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:10px; }
-  .opt{
-    display:flex; align-items:center; gap:9px;
-    padding: 11px 12px; border-radius: 10px;
-    border: 1px solid var(--panel-border); background: rgba(255,255,255,0.03);
-    cursor:pointer; font-size: 13.5px; transition: all .15s ease;
-  }
-  .opt:hover{ border-color: rgba(139,92,246,0.5); }
-  .opt.disabled{ pointer-events:none; opacity:0.45; }
-  .opt.chosen{ border-color: var(--violet); background: linear-gradient(120deg, rgba(139,92,246,0.2), rgba(34,211,238,0.12)); opacity:1; }
-  .opt .ic{ font-size:16px; }
-  .opt-visual{ flex-direction:column; gap:6px; }
-  .opt-visual span:last-child{ font-size:11.5px; text-align:center; }
-
-  .note{
-    font-family:'JetBrains Mono', monospace; font-size:12px; line-height:1.6;
-    color: var(--ink-soft); background: rgba(255,255,255,0.03);
-    border-left: 2px solid var(--cyan); border-radius: 4px 8px 8px 4px;
-    padding: 10px 12px; margin-top:10px;
-  }
-
-  .ready-block{
-    margin-top:10px; padding:14px; border-radius:12px; border:1px solid var(--violet);
-    background: linear-gradient(120deg, rgba(139,92,246,0.1), rgba(34,211,238,0.06));
-  }
-  .result-label{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--cyan); margin-bottom:8px; }
-  .btn{
-    font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:13.5px;
-    padding: 10px 16px; border-radius:10px; cursor:pointer; border:none;
-    display:inline-flex; align-items:center; gap:6px; margin-top:8px; margin-right:6px;
-  }
-  .btn.primary{ background: var(--grad); color:#0A0B14; }
-  .btn.ghost{ background:transparent; border:1px solid var(--panel-border); color:var(--ink); }
-  .btn.quick{ background: linear-gradient(120deg, var(--cyan), var(--violet)); color:#0A0B14; }
-  .btn:disabled{ opacity:0.5; }
-
-  details.prompt-toggle{ margin-top:12px; }
-  details.prompt-toggle summary{ cursor:pointer; color:var(--ink-soft); font-size:12px; font-family:'JetBrains Mono',monospace; }
-  .prompt-box{
-    margin-top:8px; background: rgba(255,255,255,0.03); border:1px solid var(--panel-border);
-    border-radius:10px; padding:12px; font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.6;
-    white-space:pre-wrap;
-  }
-  .prompt-box .var{ color:var(--cyan); background:rgba(34,211,238,0.14); padding:1px 4px; border-radius:3px; }
-
-  .dest-list{ display:flex; flex-direction:column; gap:6px; margin-top:8px; }
-  .dest{
-    display:flex; align-items:center; justify-content:space-between; gap:8px;
-    padding: 9px 11px; border-radius:10px; border:1px solid var(--panel-border);
-    background: rgba(255,255,255,0.025); text-decoration:none; color:var(--ink); font-size:13px;
-  }
-  .dest:hover{ border-color: var(--violet); }
-  .dest .dname{ font-weight:600; }
-  .dest .dnote{ font-size:11px; color:var(--ink-soft); }
-
-  .pending-attachments{ display:flex; flex-wrap:wrap; gap:6px; padding: 0 16px; }
-  .pending-chip{
-    display:flex; align-items:center; gap:6px; background: rgba(255,255,255,0.05);
-    border:1px solid var(--panel-border); border-radius:100px; padding:4px 8px 4px 4px; font-size:11.5px; color:var(--ink-soft);
-  }
-  .pending-chip img{ width:20px; height:20px; border-radius:50%; object-fit:cover; }
-  .pending-chip button{ background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:11px; }
-
-  .input-bar{
-    flex-shrink:0; display:flex; align-items:flex-end; gap:8px;
-    padding: 12px 16px 16px; border-top:1px solid var(--panel-border);
-  }
-  .input-bar textarea{
-    flex:1; resize:none; max-height:120px; min-height:44px;
-    font-family:'Inter', sans-serif; font-size:14.5px; color:var(--ink);
-    background: rgba(255,255,255,0.04); border:1px solid var(--panel-border);
-    border-radius: 14px; padding:11px 14px; outline:none;
-  }
-  .input-bar textarea:focus{ border-color: var(--violet); }
-  .icon-btn{
-    width:44px; height:44px; border-radius:50%; border:1px solid var(--panel-border);
-    background: rgba(255,255,255,0.04); color:var(--ink); cursor:pointer; font-size:18px;
-    display:flex; align-items:center; justify-content:center; flex-shrink:0;
-  }
-  .icon-btn.send{ background: var(--grad); color:#0A0B14; border:none; }
-  .icon-btn:disabled{ opacity:0.4; }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="brand">
-    <img src="/logo.svg" alt="Diz Direito">
-    <div class="brand-actions">
-      <button class="subscribe-btn" id="subscribeBtn" onclick="assinarPlano()">⭐ Assinar</button>
-      <button class="new-chat-btn" id="newChatBtn">🔄 Nova conversa</button>
-    </div>
+    <div class="logo"><img src="/logo.svg" alt="Diz Direito" style="height:150px;width:auto;max-width:100%;"></div>
+    <button class="hist-btn" id="histBtn">🕘 Histórico <span class="badge" id="histBadge" style="display:none;">0</span></button>
   </div>
-  <div class="chat-log" id="chatLog"></div>
-  <div class="pending-attachments" id="pendingAttachments"></div>
-  <div class="input-bar">
-    <button class="icon-btn" id="attachBtn" title="Anexar arquivo">📎</button>
-    <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx" multiple style="display:none;">
-    <textarea id="chatInput" placeholder="Escreva o que você precisa..." rows="1"></textarea>
-    <button class="icon-btn send" id="sendBtn" title="Enviar">➤</button>
+  <div class="trail" id="trail"></div>
+  <div class="card" id="card"><!-- injected --></div>
+  <footer>protótipo de validação · powered by IA</footer>
+
+  <div style="text-align:center; margin:22px 0 6px;">
+    <button id="subscribeBtn" onclick="assinarPlano()" class="subscribe-btn">⭐ Seja um Assinante</button>
   </div>
 </div>
 
 <script>
-const chatState = {
-  messages: [],
-  stage: 'idle', // idle | questions | attachment | busy
-  projectInput: '', projectType: '', outputType: 'texto', isResume: false,
-  questions: [], qIndex: 0, answers: {},
-  requiresAttachment: false, attachmentLabel: '',
-  attachments: [], pendingAttachments: [],
-  finalPrompt: ''
-};
-let msgCounter = 0;
-function nextId(){ return 'm' + (++msgCounter); }
+  // Direciona pro link oficial de assinatura no Mercado Pago
+  function assinarPlano(){
+    window.location.href = 'https://mpago.la/1QJWxMQ';
+  }
 
-function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('status') || urlParams.get('collection_status');
+
+    if(status === 'approved'){
+      const dataExpiracao = new Date();
+      dataExpiracao.setDate(dataExpiracao.getDate() + 30);
+      localStorage.setItem('dizDireitoAssinante', 'ativo');
+      localStorage.setItem('dizDireitoValidade', dataExpiracao.toISOString());
+      window.history.replaceState({}, document.title, window.location.pathname);
+      alert('🎉 Pagamento aprovado com sucesso! Seu acesso ilimitado por 30 dias está ativo.');
+    }
+
+    const statusAssinatura = localStorage.getItem('dizDireitoAssinante');
+    const validade = localStorage.getItem('dizDireitoValidade');
+    const botaoAssinar = document.getElementById('subscribeBtn');
+
+    if(statusAssinatura === 'ativo' && validade){
+      if(new Date(validade) > new Date()){
+        if(botaoAssinar){
+          botaoAssinar.innerText = '⭐ Assinatura Ativa (Ilimitado)';
+          botaoAssinar.classList.add('subscribe-active');
+        }
+      }else{
+        localStorage.removeItem('dizDireitoAssinante');
+        localStorage.removeItem('dizDireitoValidade');
+      }
+    }
+  });
+</script>
+
+<script>
+const state = { screen: 'start', projectInput: '', projectType: '', outputType: 'texto', isResume: false, questions: [], stepIndex: 0, answers: {}, finalPrompt: '', requiresAttachment: false, attachmentLabel: '', attachments: [], history: [], executedResult: '', executedImageUrl: '', resumeData: null };
+
+const cardEl = document.getElementById('card');
+const trailEl = document.getElementById('trail');
+const histBtn = document.getElementById('histBtn');
+const histBadge = document.getElementById('histBadge');
+
+function updateHistBadge(){
+  if(state.history.length > 0){
+    histBadge.style.display = 'inline';
+    histBadge.textContent = state.history.length;
+  }else{
+    histBadge.style.display = 'none';
+  }
+}
+
+histBtn.addEventListener('click', renderHistory);
+
+function renderHistory(){
+  state.screen = 'history';
+  trailEl.innerHTML = '';
+  const items = state.history;
+  cardEl.innerHTML = `
+    <div class="kicker">seus projetos</div>
+    <h1>Histórico</h1>
+    <p class="hint">Projetos gerados nesta sessão. Fecha se você recarregar a página.</p>
+    ${items.length === 0 ? '<div class="hist-empty">Nenhum projeto ainda. Crie o primeiro!</div>' : items.map((h,i)=>`
+      <div class="hist-item" data-idx="${i}">
+        <div class="htype">${esc(h.projectType)}</div>
+        <div class="hpreview">${esc(h.prompt.slice(0,140))}${h.prompt.length>140?'…':''}</div>
+        <div class="htime">${h.time}</div>
+      </div>
+    `).join('')}
+    <div class="grow"></div>
+    <div class="nav">
+      <button class="back" id="histBack">← voltar</button>
+      <span></span>
+    </div>
+  `;
+  cardEl.querySelectorAll('.hist-item').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const h = state.history[+el.dataset.idx];
+      state.projectType = h.projectType;
+      state.finalPrompt = h.prompt;
+      state.outputType = h.outputType || 'texto';
+      state.isResume = h.isResume || false;
+      state.executedResult = h.executedResult || '';
+      state.executedImageUrl = h.executedImageUrl || '';
+      state.resumeData = h.resumeData || null;
+      state.attachments = h.hadAttachment ? state.attachments : [];
+      state.projectInput = h.projectInput;
+      renderResult();
+    });
+  });
+  document.getElementById('histBack').addEventListener('click', ()=>{
+    if(state.finalPrompt) renderResult(); else renderStart();
+  });
+}
+
+function renderTrail(){
+  const extra = state.requiresAttachment ? 1 : 0;
+  const total = Math.max(state.questions.length + extra, 1);
+  let html = '';
+  for(let i=0;i<total;i++){
+    let cls = 'seg';
+    if(state.screen==='result') cls += ' done';
+    else if(i < state.stepIndex) cls += ' done';
+    else if(i === state.stepIndex && (state.screen==='question' || state.screen==='attachment')) cls += ' current';
+    html += `<div class="${cls}"><div class="fill"></div></div>`;
+  }
+  trailEl.innerHTML = state.questions.length ? html : '';
+}
+
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function highlightVars(t){ return esc(t).replace(/\[([^\]]+)\]/g, '<span class="var">[$1]</span>'); }
 
 function getDeviceId(){
   let id = localStorage.getItem('dizDireitoDeviceId');
-  if(!id){ id = 'dev_' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('dizDireitoDeviceId', id); }
+  if(!id){
+    id = 'dev_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('dizDireitoDeviceId', id);
+  }
   return id;
 }
 
 async function apiPost(path, body){
-  const response = await fetch(path, { method:'POST', headers:{ 'Content-Type':'application/json', 'x-device-id':getDeviceId() }, body: JSON.stringify(body) });
-  if(response.status === 429){ const err = await response.json(); const e = new Error(err.message||'Limite atingido'); e.quotaExceeded = true; throw e; }
-  if(!response.ok) throw new Error('Erro no servidor');
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-device-id': getDeviceId() },
+    body: JSON.stringify(body)
+  });
+  if(response.status === 429){
+    const err = await response.json();
+    const e = new Error(err.message || 'Limite atingido');
+    e.quotaExceeded = true;
+    throw e;
+  }
+  if(!response.ok){
+    throw new Error('Erro no servidor');
+  }
   return response.json();
+}
+
+function renderStartAttachChips(){
+  const el = document.getElementById('startAttachChips');
+  if(!el) return;
+  el.innerHTML = state.attachments.map((a, i) => `
+    <div class="attach-chip">
+      ${a.kind === 'image'
+        ? `<img src="data:${a.mime};base64,${a.base64}" alt="${esc(a.name)}">`
+        : `<span class="attach-chip-file">${a.kind === 'pdf' ? '📄' : '📎'}</span>`
+      }
+      <span class="attach-chip-name">${esc(a.name)}</span>
+      <button type="button" class="attach-chip-remove" data-idx="${i}">✕</button>
+    </div>
+  `).join('');
+  el.querySelectorAll('.attach-chip-remove').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      state.attachments.splice(+btn.dataset.idx, 1);
+      renderStartAttachChips();
+    });
+  });
+}
+
+function renderStart(){
+  state.screen = 'start';
+  renderTrail();
+  cardEl.innerHTML = `
+    <div class="mascot-wrap">
+      <div class="mascot-track">
+        <div class="idea-bulb">
+          <svg width="26" height="34" viewBox="0 0 26 34" fill="none">
+            <circle cx="13" cy="13" r="11" fill="#FCD34D"/>
+            <rect x="9" y="23" width="8" height="5" rx="1.5" fill="#9491AD"/>
+            <rect x="10" y="29" width="6" height="3" rx="1" fill="#6B6885"/>
+            <path d="M13 6v5M9 9l2 2M17 9l-2 2" stroke="#B45309" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="thought-bubble" id="pugThought">Vamos criar algo incrível!</div>
+        <div class="pug-face">
+          <img src="/pug-real.png" alt="Mascote Pug" style="width:210px;height:210px;border-radius:50%;object-fit:cover;display:block;box-shadow:0 8px 24px rgba(0,0,0,0.4);border:2px solid rgba(255,255,255,0.08);">
+        </div>
+      </div>
+    </div>
+    <div class="kicker">passo 1 — o que você quer criar</div>
+    <h1>Me conta o que <span>você precisa</span>.</h1>
+    <p class="hint">Pode ser qualquer coisa: uma foto pro Instagram, um anúncio, um código, um texto de venda, um vídeo. A gente descobre o resto juntos.</p>
+    <textarea id="startInput" placeholder="Ex: quero criar uma foto legal para postar no Instagram"></textarea>
+    <div class="error" id="startError">Escreve alguma coisa primeiro :)</div>
+
+    <label class="dropzone dropzone-compact" id="startDropzone">
+      <span class="ic">📎</span>
+      <span class="label" id="startDzLabel">Anexar referência (opcional) — foto, currículo antigo, etc.</span>
+      <input type="file" id="startFileInput" accept="image/*,.pdf,.doc,.docx" multiple>
+    </label>
+    <div class="attach-chips" id="startAttachChips"></div>
+
+    <div class="nav">
+      <span></span>
+      <button class="start" id="startBtn"><span class="spinner"></span><span>Começar</span></button>
+    </div>
+  `;
+  document.getElementById('startBtn').addEventListener('click', startFlow);
+
+  const startFileInput = document.getElementById('startFileInput');
+  startFileInput.addEventListener('change', async ()=>{
+    for(const file of startFileInput.files){
+      const base64 = await fileToBase64(file);
+      const kind = file.type.startsWith('image/') ? 'image' : (file.type === 'application/pdf' ? 'pdf' : 'other');
+      state.attachments.push({ base64, mime: file.type, name: file.name, kind });
+    }
+    startFileInput.value = '';
+    renderStartAttachChips();
+  });
+  renderStartAttachChips();
+
+  const pugPhrases = ['Vamos criar algo incrível!', 'Conta sua ideia...', 'Toda ideia começa simples', 'Tô aqui pra ajudar!'];
+  let pugPhraseIndex = 0;
+  const thoughtEl = document.getElementById('pugThought');
+  if(thoughtEl){
+    setInterval(()=>{
+      pugPhraseIndex = (pugPhraseIndex + 1) % pugPhrases.length;
+      thoughtEl.textContent = pugPhrases[pugPhraseIndex];
+    }, 6000);
+  }
+}
+
+async function startFlow(){
+  const val = document.getElementById('startInput').value.trim();
+  const errEl = document.getElementById('startError');
+  const btn = document.getElementById('startBtn');
+  if(!val){ errEl.classList.add('show'); return; }
+  errEl.classList.remove('show');
+  state.projectInput = val;
+  btn.disabled = true; btn.classList.add('loading');
+
+  try{
+    const json = await apiPost('/api/questions', { projectInput: val });
+    state.projectType = json.project_type || 'projeto';
+    state.questions = json.questions || [];
+    state.requiresAttachment = !!json.requires_attachment && state.attachments.length === 0;
+    state.outputType = json.output_type === 'imagem' ? 'imagem' : 'texto';
+    state.attachmentLabel = json.attachment_label || 'Anexe um arquivo de referência';
+
+    // se o projeto for currículo, garante uma pergunta visual de layout e força saída como texto/PDF
+    const isCurriculo = /curr[íi]culo|resume|\bcv\b/i.test(state.projectType + ' ' + val);
+    state.isResume = isCurriculo;
+    if(isCurriculo){
+      state.outputType = 'texto'; // currículo nunca deve ser roteado pra geração de imagem
+      if(!state.questions.some(q => q.id === 'layout_curriculo')){
+        state.questions.push(LAYOUT_CURRICULO_QUESTION);
+      }
+    }
+
+    state.stepIndex = 0;
+    state.answers = {};
+    if(state.questions.length === 0) throw new Error('sem perguntas');
+    renderQuestion();
+  }catch(e){
+    btn.disabled = false; btn.classList.remove('loading');
+    errEl.textContent = e.quotaExceeded ? e.message : 'Não consegui entender, tenta descrever de outro jeito.';
+    errEl.classList.add('show');
+  }
+}
+
+function layoutPreviewSVG(kind){
+  const page = '<rect x="1" y="1" width="38" height="50" rx="2" fill="var(--panel)" stroke="var(--panel-border)" stroke-width="1"/>';
+  const lines = (x, y, w) => `<rect x="${x}" y="${y}" width="${w}" height="2.4" rx="1" fill="var(--ink-soft)" opacity="0.55"/>`;
+  let inner = '';
+  if(kind === 'foto-topo'){
+    inner = `<circle cx="20" cy="12" r="6" fill="var(--violet)"/>${lines(8,23,24)}${lines(6,29,28)}${lines(6,35,20)}${lines(6,41,24)}`;
+  }else if(kind === 'foto-lateral'){
+    inner = `<circle cx="9" cy="12" r="5" fill="var(--violet)"/>${lines(17,9,18)}${lines(17,14,14)}${lines(5,24,30)}${lines(5,30,30)}${lines(5,36,22)}${lines(5,42,26)}`;
+  }else if(kind === 'sem-foto'){
+    inner = `${lines(6,8,28)}${lines(6,14,20)}${lines(6,22,28)}${lines(6,28,24)}${lines(6,34,28)}${lines(6,40,18)}`;
+  }else if(kind === 'foto-canto'){
+    inner = `<circle cx="31" cy="10" r="5" fill="var(--violet)"/>${lines(6,8,18)}${lines(6,14,14)}${lines(6,24,30)}${lines(6,30,30)}${lines(6,36,22)}${lines(6,42,26)}`;
+  }
+  return `<svg width="40" height="52" viewBox="0 0 40 52">${page}${inner}</svg>`;
+}
+
+const LAYOUT_CURRICULO_QUESTION = {
+  id: 'layout_curriculo',
+  label: 'Qual estilo de layout você prefere?',
+  options: [
+    { label: 'Foto no topo, centralizada', svg: layoutPreviewSVG('foto-topo') },
+    { label: 'Foto lateral à esquerda', svg: layoutPreviewSVG('foto-lateral') },
+    { label: 'Sem foto, só texto', svg: layoutPreviewSVG('sem-foto') },
+    { label: 'Foto no canto superior', svg: layoutPreviewSVG('foto-canto') }
+  ]
+};
+
+function renderQuestion(){
+  state.screen = 'question';
+  renderTrail();
+  const q = state.questions[state.stepIndex];
+  const total = state.questions.length;
+  const current = state.answers[q.id] || null;
+
+  let optsHtml = q.options.map((o,i) => `
+    <div class="opt${o.svg ? ' opt-visual' : ''}${current===o.label?' sel':''}" data-label="${esc(o.label)}">
+      ${o.svg ? `<span class="ic-visual">${o.svg}</span>` : `<span class="ic">${o.icon||'✨'}</span>`}<span>${esc(o.label)}</span>
+    </div>
+  `).join('');
+
+  cardEl.innerHTML = `
+    <div class="kicker">passo ${state.stepIndex+2} de ${total+2} — ${esc(state.projectType)}</div>
+    <h1>${esc(q.label)}</h1>
+    <p class="hint">Escolhe a opção que mais combina, ou descreve com suas palavras.</p>
+    <div class="options">
+      ${optsHtml}
+      <div class="opt custom" id="customOpt">
+        <span class="ic">✏️</span><input type="text" id="customInput" placeholder="Outro... (digite aqui)">
+      </div>
+    </div>
+    <div class="grow"></div>
+    <div class="nav">
+      <button class="back" id="backBtn">${state.stepIndex===0 ? '← voltar ao início' : '← voltar'}</button>
+      <button class="next" id="nextBtn" ${current?'':'disabled'}><span class="spinner"></span><span>${state.stepIndex===total-1?(state.requiresAttachment?'Próxima':'Ver resultado'):'Próxima'}</span></button>
+    </div>
+  `;
+
+  cardEl.querySelectorAll('.opt:not(.custom)').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      state.answers[q.id] = el.dataset.label;
+      document.getElementById('customInput').value = '';
+      renderQuestion();
+    });
+  });
+
+  const customInput = document.getElementById('customInput');
+  customInput.addEventListener('input', ()=>{
+    const v = customInput.value.trim();
+    state.answers[q.id] = v || null;
+    document.getElementById('nextBtn').disabled = !v;
+    cardEl.querySelectorAll('.opt:not(.custom)').forEach(o=>o.classList.remove('sel'));
+  });
+
+  document.getElementById('backBtn').addEventListener('click', ()=>{
+    if(state.stepIndex===0){ renderStart(); }
+    else{ state.stepIndex--; renderQuestion(); }
+  });
+
+  document.getElementById('nextBtn').addEventListener('click', ()=>{
+    if(state.stepIndex < total-1){
+      state.stepIndex++;
+      renderQuestion();
+    }else if(state.requiresAttachment){
+      state.stepIndex++;
+      renderAttachment();
+    }else{
+      generateFinal();
+    }
+  });
 }
 
 function fileToBase64(file){
@@ -229,87 +756,84 @@ function fileToBase64(file){
   });
 }
 
-function randomImageSeed(){ return Math.floor(Math.random() * 2147483647); }
+function renderAttachment(){
+  state.screen = 'attachment';
+  renderTrail();
+  const total = state.questions.length;
+  cardEl.innerHTML = `
+    <div class="kicker">passo ${total+2} de ${total+3} — anexo</div>
+    <h1>${esc(state.attachmentLabel)}</h1>
+    <p class="hint">A IA vai analisar o arquivo pra deixar o prompt final bem específico pra ele.</p>
+    <label class="dropzone" id="dropzone">
+      <span class="ic">📎</span>
+      <span class="label" id="dzLabel">Clique para escolher um arquivo (imagem)</span>
+      <input type="file" id="fileInput" accept="image/*">
+    </label>
+    <div class="preview" id="preview" style="display:none;">
+      <img id="previewImg">
+      <span class="name" id="previewName"></span>
+    </div>
+    <div class="grow"></div>
+    <div class="nav">
+      <button class="back" id="backBtn">← voltar</button>
+      <button class="next" id="attachNextBtn" ${state.attachments.length?'':'disabled'}><span class="spinner"></span><span>Ver resultado</span></button>
+    </div>
+  `;
 
-function downloadBlob(blob, filename){
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(()=> URL.revokeObjectURL(url), 2000);
+  const fileInput = document.getElementById('fileInput');
+  fileInput.addEventListener('change', async ()=>{
+    const file = fileInput.files[0];
+    if(!file) return;
+    const base64 = await fileToBase64(file);
+    state.attachments.push({ base64, mime: file.type, name: file.name });
+    document.getElementById('dzLabel').textContent = 'Arquivo carregado ✓';
+    document.getElementById('preview').style.display = 'flex';
+    document.getElementById('previewImg').src = 'data:'+file.type+';base64,'+base64;
+    document.getElementById('previewName').textContent = file.name;
+    document.getElementById('attachNextBtn').disabled = false;
+  });
+
+  document.getElementById('backBtn').addEventListener('click', ()=>{
+    state.stepIndex--;
+    renderQuestion();
+  });
+
+  document.getElementById('attachNextBtn').addEventListener('click', generateFinal);
 }
 
-async function copyText(text){
-  try{ await navigator.clipboard.writeText(text); return true; }
-  catch(e){
-    try{
-      const ta = document.createElement('textarea'); ta.value = text;
-      ta.style.position='fixed'; ta.style.left='-9999px';
-      document.body.appendChild(ta); ta.focus(); ta.select();
-      const ok = document.execCommand('copy'); document.body.removeChild(ta);
-      return ok;
-    }catch(e2){ return false; }
+async function generateFinal(){
+  const btn = document.getElementById('attachNextBtn') || document.getElementById('nextBtn');
+  btn.disabled = true; btn.classList.add('loading');
+
+  try{
+    const json = await apiPost('/api/final-prompt', {
+      projectInput: state.projectInput,
+      questions: state.questions,
+      answers: state.answers,
+      attachments: state.attachments.length ? state.attachments.map(a => ({ base64: a.base64, mime: a.mime })) : undefined
+    });
+    const text = json.finalPrompt;
+    state.finalPrompt = text;
+    await executeResult();
+  }catch(e){
+    btn.disabled = false; btn.classList.remove('loading');
   }
 }
 
-function layoutPreviewSVG(kind){
-  const page = '<rect x="1" y="1" width="38" height="50" rx="2" fill="var(--panel)" stroke="var(--panel-border)" stroke-width="1"/>';
-  const lines = (x,y,w) => `<rect x="${x}" y="${y}" width="${w}" height="2.4" rx="1" fill="var(--ink-soft)" opacity="0.55"/>`;
-  let inner = '';
-  if(kind==='foto-topo') inner = `<circle cx="20" cy="12" r="6" fill="var(--violet)"/>${lines(8,23,24)}${lines(6,29,28)}${lines(6,35,20)}${lines(6,41,24)}`;
-  else if(kind==='foto-lateral') inner = `<circle cx="9" cy="12" r="5" fill="var(--violet)"/>${lines(17,9,18)}${lines(17,14,14)}${lines(5,24,30)}${lines(5,30,30)}${lines(5,36,22)}${lines(5,42,26)}`;
-  else if(kind==='sem-foto') inner = `${lines(6,8,28)}${lines(6,14,20)}${lines(6,22,28)}${lines(6,28,24)}${lines(6,34,28)}${lines(6,40,18)}`;
-  else if(kind==='foto-canto') inner = `<circle cx="31" cy="10" r="5" fill="var(--violet)"/>${lines(6,8,18)}${lines(6,14,14)}${lines(6,24,30)}${lines(6,30,30)}${lines(6,36,22)}${lines(6,42,26)}`;
-  return `<svg width="40" height="52" viewBox="0 0 40 52">${page}${inner}</svg>`;
-}
-const LAYOUT_CURRICULO_QUESTION = {
-  id:'layout_curriculo', label:'Qual estilo de layout você prefere?',
-  options:[
-    { label:'Foto no topo, centralizada', svg: layoutPreviewSVG('foto-topo') },
-    { label:'Foto lateral à esquerda', svg: layoutPreviewSVG('foto-lateral') },
-    { label:'Sem foto, só texto', svg: layoutPreviewSVG('sem-foto') },
-    { label:'Foto no canto superior', svg: layoutPreviewSVG('foto-canto') }
-  ]
-};
-
-function getQuickAction(payload){
-  const text = (payload.projectType + ' ' + payload.projectInput).toLowerCase();
+function getQuickAction(){
+  const text = (state.projectType + ' ' + state.projectInput).toLowerCase();
   const has = (...words) => words.some(w => text.includes(w));
-  if(payload.attachments.length > 0 && has('fundo','background')) return { type:'link', icon:'🖼️', label:'Trocar o fundo mantendo sua foto real (remove.bg)', url:'https://www.remove.bg/upload' };
-  if(has('linkedin')) return { type:'link', icon:'💼', label:'Abrir LinkedIn e atualizar sua foto', url:'https://www.linkedin.com/in/me/' };
-  if(has('instagram','reels','stories','story','reel')) return { type:'link', icon:'📸', label:'Abrir Instagram para postar', url:'https://www.instagram.com/' };
+
+  if(state.attachments.length > 0 && has('fundo', 'background')){
+    return { type:'link', icon:'🖼️', label:'Trocar o fundo mantendo sua foto real (remove.bg)', url:'https://www.remove.bg/upload' };
+  }
+  if(has('linkedin')){
+    return { type:'link', icon:'💼', label:'Abrir LinkedIn e atualizar sua foto', url:'https://www.linkedin.com/in/me/' };
+  }
+  if(has('instagram', 'reels', 'stories', 'story', 'reel')){
+    return { type:'link', icon:'📸', label:'Abrir Instagram para postar', url:'https://www.instagram.com/' };
+  }
   return null;
-}
-
-function suggestDestinations(payload){
-  const text = (payload.projectType + ' ' + payload.projectInput).toLowerCase();
-  const has = (...words) => words.some(w => text.includes(w));
-  if(payload.outputType === 'imagem' || has('foto','imagem','design','logo','ilustra','arte','capa','banner','thumbnail')){
-    return [
-      { name:'Midjourney', icon:'🎨', note:'Melhor qualidade estética geral', url:'https://www.midjourney.com/' },
-      { name:'Ideogram', icon:'🖼️', note:'Ótimo com texto dentro da imagem', url:'https://ideogram.ai/' },
-      { name:'ChatGPT (imagens)', icon:'✨', note:'Fácil de usar, direto do navegador', url:'https://chatgpt.com/' },
-      { name:'Leonardo AI', icon:'🎭', note:'Bom para estilos artísticos variados', url:'https://leonardo.ai/' }
-    ];
-  }
-  if(has('vídeo','video','reels','tiktok','animação','animacao')){
-    return [
-      { name:'Runway', icon:'🎬', note:'Geração e edição de vídeo com IA', url:'https://runwayml.com/' },
-      { name:'Pika', icon:'🎞️', note:'Rápido pra clipes curtos', url:'https://pika.art/' },
-      { name:'Sora (OpenAI)', icon:'🌀', note:'Vídeos mais longos e realistas', url:'https://openai.com/sora' }
-    ];
-  }
-  if(has('código','codigo','programação','programacao','script','python','javascript','app','api')){
-    return [
-      { name:'Claude', icon:'🤖', note:'Ótimo pra código e explicações claras', url:'https://claude.ai/' },
-      { name:'ChatGPT', icon:'💬', note:'Boa opção alternativa', url:'https://chatgpt.com/' },
-      { name:'GitHub Copilot', icon:'🧩', note:'Direto no seu editor de código', url:'https://github.com/features/copilot' }
-    ];
-  }
-  return [
-    { name:'Claude', icon:'🤖', note:'Ótimo pra textos com nuance e contexto', url:'https://claude.ai/' },
-    { name:'ChatGPT', icon:'💬', note:'Rápido e bem conhecido', url:'https://chatgpt.com/' },
-    { name:'Gemini', icon:'♊', note:'Boa opção integrada ao Google', url:'https://gemini.google.com/' }
-  ];
 }
 
 function downloadResumePDF(data, filename){
@@ -317,56 +841,93 @@ function downloadResumePDF(data, filename){
     if(!window.jspdf || !window.jspdf.jsPDF) throw new Error('jsPDF indisponível');
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit:'pt', format:'a4' });
-    const margin = 50, maxWidth = 495, pageBottom = 780;
+    const margin = 50;
+    const maxWidth = 495;
+    const pageBottom = 780;
     let y = margin;
+
     const checkBreak = (needed) => { if(y + needed > pageBottom){ doc.addPage(); y = margin; } };
+
     doc.setFont('Helvetica','bold'); doc.setFontSize(22); doc.setTextColor(20,20,20);
     doc.text(data.name || '[Seu nome]', margin, y); y += 26;
-    if(data.title){ doc.setFont('Helvetica','normal'); doc.setFontSize(13); doc.setTextColor(90,90,90); doc.text(data.title, margin, y); y += 18; }
-    if(data.contact){ doc.setFontSize(10); doc.setTextColor(120,120,120); doc.text(data.contact, margin, y); y += 20; }
+
+    if(data.title){
+      doc.setFont('Helvetica','normal'); doc.setFontSize(13); doc.setTextColor(90,90,90);
+      doc.text(data.title, margin, y); y += 18;
+    }
+    if(data.contact){
+      doc.setFontSize(10); doc.setTextColor(120,120,120);
+      doc.text(data.contact, margin, y); y += 20;
+    }
     doc.setDrawColor(180,180,180); doc.line(margin, y, margin+maxWidth, y); y += 18;
+
     const sectionHeader = (title) => {
-      checkBreak(24); doc.setFont('Helvetica','bold'); doc.setFontSize(12); doc.setTextColor(30,30,30);
+      checkBreak(24);
+      doc.setFont('Helvetica','bold'); doc.setFontSize(12); doc.setTextColor(30,30,30);
       doc.text(title.toUpperCase(), margin, y); y += 6;
       doc.setDrawColor(210,210,210); doc.line(margin, y, margin+maxWidth, y); y += 14;
     };
+
     if(data.summary){
       sectionHeader('Resumo');
       doc.setFont('Helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(50,50,50);
-      doc.splitTextToSize(data.summary, maxWidth).forEach(line=>{ checkBreak(14); doc.text(line, margin, y); y += 14; });
+      const lines = doc.splitTextToSize(data.summary, maxWidth);
+      lines.forEach(line=>{ checkBreak(14); doc.text(line, margin, y); y += 14; });
       y += 8;
     }
+
     if(Array.isArray(data.experience) && data.experience.length){
       sectionHeader('Experiência');
-      data.experience.forEach(expx=>{
+      data.experience.forEach(exp=>{
         checkBreak(18);
         doc.setFont('Helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,20,20);
-        doc.text(expx.role||'', margin, y);
-        if(expx.period){ doc.setFont('Helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(120,120,120); doc.text(expx.period, margin+maxWidth, y, {align:'right'}); }
+        doc.text(exp.role || '', margin, y);
+        if(exp.period){
+          doc.setFont('Helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(120,120,120);
+          doc.text(exp.period, margin+maxWidth, y, { align:'right' });
+        }
         y += 14;
-        if(expx.company){ doc.setFont('Helvetica','normal'); doc.setFontSize(10); doc.setTextColor(90,90,90); doc.text(expx.company, margin, y); y += 14; }
-        (expx.bullets||[]).forEach(b=>{
-          doc.splitTextToSize('• '+b, maxWidth-10).forEach(line=>{ checkBreak(13); doc.setFont('Helvetica','normal'); doc.setFontSize(10); doc.setTextColor(50,50,50); doc.text(line, margin+8, y); y += 13; });
+        if(exp.company){
+          doc.setFont('Helvetica','normal'); doc.setFontSize(10); doc.setTextColor(90,90,90);
+          doc.text(exp.company, margin, y); y += 14;
+        }
+        (exp.bullets||[]).forEach(b=>{
+          const lines = doc.splitTextToSize('• ' + b, maxWidth-10);
+          lines.forEach(line=>{
+            checkBreak(13);
+            doc.setFont('Helvetica','normal'); doc.setFontSize(10); doc.setTextColor(50,50,50);
+            doc.text(line, margin+8, y); y += 13;
+          });
         });
         y += 8;
       });
     }
+
     if(Array.isArray(data.education) && data.education.length){
       sectionHeader('Formação');
       data.education.forEach(edu=>{
         checkBreak(16);
         doc.setFont('Helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(20,20,20);
-        doc.text(edu.degree||'', margin, y);
-        if(edu.period){ doc.setFont('Helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(120,120,120); doc.text(edu.period, margin+maxWidth, y, {align:'right'}); }
+        doc.text(edu.degree || '', margin, y);
+        if(edu.period){
+          doc.setFont('Helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(120,120,120);
+          doc.text(edu.period, margin+maxWidth, y, { align:'right' });
+        }
         y += 13;
-        if(edu.institution){ doc.setFont('Helvetica','normal'); doc.setFontSize(10); doc.setTextColor(90,90,90); doc.text(edu.institution, margin, y); y += 16; }
+        if(edu.institution){
+          doc.setFont('Helvetica','normal'); doc.setFontSize(10); doc.setTextColor(90,90,90);
+          doc.text(edu.institution, margin, y); y += 16;
+        }
       });
     }
+
     if(Array.isArray(data.skills) && data.skills.length){
       sectionHeader('Habilidades');
       doc.setFont('Helvetica','normal'); doc.setFontSize(10); doc.setTextColor(50,50,50);
-      doc.splitTextToSize(data.skills.join('  •  '), maxWidth).forEach(line=>{ checkBreak(14); doc.text(line, margin, y); y += 14; });
+      const lines = doc.splitTextToSize(data.skills.join('  •  '), maxWidth);
+      lines.forEach(line=>{ checkBreak(14); doc.text(line, margin, y); y += 14; });
     }
+
     doc.save(filename);
   }catch(e){
     const plain = [data.name, data.title, data.contact, '', data.summary, '', 'EXPERIÊNCIA',
@@ -374,8 +935,24 @@ function downloadResumePDF(data, filename){
       'FORMAÇÃO', ...(data.education||[]).map(x=>`${x.degree} — ${x.institution} (${x.period})`),
       '', 'HABILIDADES', (data.skills||[]).join(', ')
     ].join('\n');
-    downloadBlob(new Blob([plain], {type:'text/plain;charset=utf-8'}), filename.replace(/\.pdf$/i,'.txt'));
+    const blob = new Blob([plain], { type:'text/plain;charset=utf-8' });
+    downloadBlob(blob, filename.replace(/\.pdf$/i,'.txt'));
   }
+}
+
+function randomImageSeed(){
+  return Math.floor(Math.random() * 2147483647);
+}
+
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=> URL.revokeObjectURL(url), 2000);
 }
 
 function downloadTextAsPDF(text, filename){
@@ -383,388 +960,329 @@ function downloadTextAsPDF(text, filename){
     if(!window.jspdf || !window.jspdf.jsPDF) throw new Error('jsPDF indisponível');
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit:'pt', format:'a4' });
-    const margin = 48, maxWidth = 500, pageBottom = 780;
+    const margin = 48;
+    const maxWidth = 500;
+    const pageBottom = 780;
     let y = margin;
+
     const checkBreak = (needed) => { if(y + needed > pageBottom){ doc.addPage(); y = margin; } };
-    const stripInline = (s) => s.replace(/\*\*(.*?)\*\*/g,'$1').replace(/__(.*?)__/g,'$1').replace(/\*(.*?)\*/g,'$1').replace(/`(.*?)`/g,'$1');
-    text.split('\n').forEach(raw=>{
-      const trimmed = raw.trim();
-      if(trimmed===''){ y += 8; return; }
+    const stripInline = (s) => s.replace(/\*\*(.*?)\*\*/g, '$1').replace(/__(.*?)__/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/`(.*?)`/g, '$1');
+
+    const paragraphs = text.split('\n');
+    paragraphs.forEach(raw=>{
+      const line = raw.trimEnd();
+      const trimmed = line.trim();
+
+      if(trimmed === '' ){ y += 8; return; }
       if(/^-{3,}$/.test(trimmed)){ checkBreak(10); doc.setDrawColor(200,200,200); doc.line(margin,y,margin+maxWidth,y); y += 12; return; }
-      if(/^\|?[\s:-]+\|[\s:|-]+$/.test(trimmed)) return;
-      const h3 = trimmed.match(/^###\s+(.*)/), h2 = trimmed.match(/^##\s+(.*)/), h1 = trimmed.match(/^#\s+(.*)/);
+      if(/^\|?[\s:-]+\|[\s:|-]+$/.test(trimmed)) return; // separador de tabela markdown, ignora
+
+      const h3 = trimmed.match(/^###\s+(.*)/);
+      const h2 = trimmed.match(/^##\s+(.*)/);
+      const h1 = trimmed.match(/^#\s+(.*)/);
       const bullet = trimmed.match(/^[-*]\s+(.*)/);
       const tableRow = trimmed.match(/^\|(.+)\|$/);
-      if(h1||h2||h3){
+
+      if(h1 || h2 || h3){
         const content = stripInline((h1||h2||h3)[1]);
-        checkBreak(26); doc.setFont('Helvetica','bold'); doc.setFontSize(h1?16:h2?13.5:12); doc.setTextColor(20,20,20);
-        doc.splitTextToSize(content, maxWidth).forEach(l=>{ checkBreak(18); doc.text(l, margin, y); y += (h1?20:17); });
-        y += 4; return;
+        checkBreak(26);
+        doc.setFont('Helvetica','bold');
+        doc.setFontSize(h1 ? 16 : h2 ? 13.5 : 12);
+        doc.setTextColor(20,20,20);
+        const lines = doc.splitTextToSize(content, maxWidth);
+        lines.forEach(l=>{ checkBreak(18); doc.text(l, margin, y); y += (h1?20:17); });
+        y += 4;
+        return;
       }
+
       if(tableRow){
-        const cells = tableRow[1].split('|').map(c=>stripInline(c.trim())).filter((c,i,arr)=> !(arr.every(x=>/^:?-+:?$/.test(x))));
+        const cells = tableRow[1].split('|').map(c => stripInline(c.trim())).filter((c,i,arr)=> !(arr.every(x=>/^:?-+:?$/.test(x))));
+        const rowText = cells.join('   |   ');
         doc.setFont('Courier','normal'); doc.setFontSize(9); doc.setTextColor(50,50,50);
-        doc.splitTextToSize(cells.join('   |   '), maxWidth).forEach(l=>{ checkBreak(13); doc.text(l, margin, y); y += 12; });
+        const lines = doc.splitTextToSize(rowText, maxWidth);
+        lines.forEach(l=>{ checkBreak(13); doc.text(l, margin, y); y += 12; });
         return;
       }
+
       if(bullet){
+        const content = stripInline(bullet[1]);
         doc.setFont('Helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(40,40,40);
-        doc.splitTextToSize('•  '+stripInline(bullet[1]), maxWidth-10).forEach(l=>{ checkBreak(14); doc.text(l, margin+6, y); y += 14; });
+        const lines = doc.splitTextToSize('•  ' + content, maxWidth-10);
+        lines.forEach(l=>{ checkBreak(14); doc.text(l, margin+6, y); y += 14; });
         return;
       }
+
+      // parágrafo normal
+      const content = stripInline(trimmed);
       doc.setFont('Helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(40,40,40);
-      doc.splitTextToSize(stripInline(trimmed), maxWidth).forEach(l=>{ checkBreak(14); doc.text(l, margin, y); y += 14; });
+      const lines = doc.splitTextToSize(content, maxWidth);
+      lines.forEach(l=>{ checkBreak(14); doc.text(l, margin, y); y += 14; });
     });
+
     doc.save(filename);
   }catch(e){
-    downloadBlob(new Blob([text], {type:'text/plain;charset=utf-8'}), filename.replace(/\.pdf$/i,'.txt'));
+    const txtBlob = new Blob([text], { type:'text/plain;charset=utf-8' });
+    downloadBlob(txtBlob, filename.replace(/\.pdf$/i, '.txt'));
   }
 }
 
 async function downloadImageFile(url, filename){
   try{
     const response = await fetch(url, { mode:'cors' });
-    if(!response.ok) throw new Error('falha');
-    downloadBlob(await response.blob(), filename);
+    if(!response.ok) throw new Error('falha ao buscar imagem');
+    const blob = await response.blob();
+    downloadBlob(blob, filename);
     return true;
-  }catch(e){ return false; }
-}
-
-// ---------- Renderização do chat ----------
-const chatLog = document.getElementById('chatLog');
-
-function addMessage(msg){
-  msg.id = msg.id || nextId();
-  chatState.messages.push(msg);
-  renderChat();
-  return msg.id;
-}
-function removeMessage(id){
-  chatState.messages = chatState.messages.filter(m => m.id !== id);
-  renderChat();
-}
-function updateMessage(id, patch){
-  const m = chatState.messages.find(x => x.id === id);
-  if(m) Object.assign(m, patch);
-  renderChat();
-}
-
-function renderChat(){
-  chatLog.innerHTML = chatState.messages.map(renderMessage).join('');
-  chatLog.scrollTop = chatLog.scrollHeight;
-}
-
-function renderMessage(m){
-  const avatar = m.role === 'assistant' ? `<img class="avatar" src="/pug-real.png" alt="Diz Direito">` : '';
-  let inner = '';
-
-  if(m.kind === 'text'){
-    inner = `<div class="bubble">${esc(m.text).replace(/\n/g,'<br>')}</div>`;
-  } else if(m.kind === 'typing'){
-    inner = `<div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
-  } else if(m.kind === 'options'){
-    const q = m.question;
-    const optsHtml = q.options.map(o => `
-      <div class="opt${o.svg?' opt-visual':''}${m.answered ? (m.chosenLabel===o.label?' chosen':' disabled') : ''}"
-           data-action="choose-option" data-msgid="${m.id}" data-label="${esc(o.label)}">
-        ${o.svg ? `<span>${o.svg}</span>` : `<span class="ic">${o.icon||'✨'}</span>`}<span>${esc(o.label)}</span>
-      </div>`).join('');
-    inner = `<div class="bubble wide"><div>${esc(q.label)}</div><div class="opt-grid">${optsHtml}</div></div>`;
-  } else if(m.kind === 'result'){
-    inner = `<div class="bubble wide">${renderResultPayload(m)}</div>`;
-  } else if(m.kind === 'attachments'){
-    inner = `<div class="bubble">${m.files.map(f => f.kind==='image'
-      ? `<img src="data:${f.mime};base64,${f.base64}" style="width:60px;height:60px;border-radius:8px;object-fit:cover;margin:2px;">`
-      : `<span style="display:inline-block;margin:2px;">📎 ${esc(f.name)}</span>`).join('')}</div>`;
-  }
-
-  return `<div class="msg-row ${m.role}">${m.role==='assistant'?avatar:''}${inner}</div>`;
-}
-
-function renderResultPayload(m){
-  const p = m.payload;
-  const hasExecuted = !!(p.executedResult || p.executedImageUrl || p.resumeData);
-  const quickAction = getQuickAction(p);
-  let readyHtml = '';
-
-  if(p.outputType === 'imagem'){
-    const hasPhotoRef = p.attachments.some(a => a.kind==='image');
-    readyHtml = `<div class="ready-block">
-      <div class="result-label">resultado diz direito</div>
-      ${hasPhotoRef ? `<div class="note">⚠️ Você anexou uma foto, mas o gerador gratuito não usa a foto real — ele cria uma imagem nova a partir de uma descrição em texto. Pra manter sua foto de verdade, veja a sugestão abaixo ou envie a foto direto pro ChatGPT/Gemini.</div>` : ''}
-      ${p.executedImageUrl ? `
-        <img src="${p.executedImageUrl}" alt="Resultado gerado" style="width:100%;border-radius:12px;border:1px solid var(--panel-border);margin-top:8px;" onerror="this.style.display='none';document.getElementById('imgerr-${m.id}').style.display='block';">
-        <div class="note" id="imgerr-${m.id}" style="display:none;">A geração de imagem gratuita falhou dessa vez (é um serviço de terceiros). <span style="text-decoration:underline;cursor:pointer;color:var(--cyan);" data-action="retry-image" data-msgid="${m.id}">Tentar de novo</span></div>
-        <button class="btn ghost" data-action="download-image" data-msgid="${m.id}">⬇️ Baixar imagem</button>
-      ` : '<div class="note">Não consegui gerar a imagem agora.</div>'}
-    </div>`;
-  } else if(p.isResume && p.resumeData){
-    readyHtml = `<div class="ready-block">
-      <div class="result-label">currículo pronto</div>
-      <p style="margin:0 0 8px;font-size:13.5px;color:var(--ink-soft);">Seu currículo já foi gerado e formatado.</p>
-      <button class="btn primary" data-action="download-resume" data-msgid="${m.id}">📄 Baixar currículo em PDF</button>
-    </div>`;
-  } else if(p.executedResult){
-    readyHtml = `<div class="ready-block">
-      <div class="result-label">resultado pronto</div>
-      <p style="margin:0 0 8px;font-size:13.5px;color:var(--ink-soft);">Seu resultado já foi gerado.</p>
-      <button class="btn primary" data-action="download-text" data-msgid="${m.id}">⬇️ Baixar resultado em PDF</button>
-    </div>`;
-  } else {
-    readyHtml = '<div class="note">Não consegui gerar o resultado agora — o prompt abaixo ainda funciona se você colar em outra IA.</div>';
-  }
-
-  const quickHtml = quickAction ? `<button class="btn quick" data-action="quick-action" data-msgid="${m.id}">${quickAction.icon} ${esc(quickAction.label)}</button><br>` : '';
-  const destHtml = suggestDestinations(p).map(d => `
-    <a class="dest" href="${d.url}" target="_blank" rel="noopener"><div><div class="dname">${d.icon} ${esc(d.name)}</div><div class="dnote">${esc(d.note)}</div></div>↗</a>
-  `).join('');
-
-  return `
-    🎉 <strong>Projeto concluído!</strong>
-    ${readyHtml}
-    <details class="prompt-toggle"><summary>ver o prompt original</summary>
-      <div class="prompt-box">${highlightVars(p.finalPrompt)}</div>
-      <button class="btn ghost" data-action="copy-prompt" data-msgid="${m.id}">Copiar prompt</button>
-    </details>
-    ${p.attachments.length ? '<div class="note">📎 A IA analisou seu(s) anexo(s) pra deixar esse resultado específico pra eles.</div>' : ''}
-    ${quickHtml}
-    <div class="dest-list">${destHtml}</div>
-  `;
-}
-
-// ---------- Delegação de eventos ----------
-chatLog.addEventListener('click', async (e)=>{
-  const el = e.target.closest('[data-action]');
-  if(!el) return;
-  const action = el.dataset.action;
-  const msgid = el.dataset.msgid;
-  const msg = chatState.messages.find(m => m.id === msgid);
-
-  if(action === 'choose-option'){
-    if(msg.answered) return;
-    const label = el.dataset.label;
-    updateMessage(msgid, { answered:true, chosenLabel: label });
-    addMessage({ role:'user', kind:'text', text: label });
-    await answerQuestion(label);
-  } else if(action === 'download-resume'){
-    downloadResumePDF(msg.payload.resumeData, 'curriculo-diz-direito.pdf');
-  } else if(action === 'download-text'){
-    downloadTextAsPDF(msg.payload.executedResult, 'diz-direito-resultado.pdf');
-  } else if(action === 'download-image'){
-    const ok = await downloadImageFile(msg.payload.executedImageUrl, 'diz-direito-imagem.jpg');
-    if(!ok) alert('Não consegui baixar automaticamente. Clique com o botão direito na imagem e escolha "Salvar imagem como...".');
-  } else if(action === 'retry-image'){
-    const encoded = encodeURIComponent(msg.payload.finalPrompt.slice(0,800));
-    msg.payload.executedImageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${randomImageSeed()}`;
-    renderChat();
-  } else if(action === 'quick-action'){
-    const qa = getQuickAction(msg.payload);
-    if(qa) window.open(qa.url, '_blank', 'noopener');
-  } else if(action === 'copy-prompt'){
-    const ok = await copyText(msg.payload.finalPrompt);
-    el.textContent = ok ? 'Copiado! ✓' : 'Selecione e copie manualmente';
-    setTimeout(()=>{ el.textContent = 'Copiar prompt'; }, 1600);
-  }
-});
-
-// ---------- Fluxo da conversa ----------
-function greet(){
-  addMessage({ role:'assistant', kind:'text', text:'Oi! Me conta o que você quer criar — pode ser um currículo, uma foto pro Instagram, um texto, um código, o que for. Também dá pra anexar uma referência com o clipe 📎 aqui embaixo.' });
-}
-
-async function beginProject(text){
-  chatState.projectInput = text;
-  chatState.stage = 'busy';
-  const typingId = addMessage({ role:'assistant', kind:'typing' });
-  try{
-    const json = await apiPost('/api/questions', { projectInput: text });
-    removeMessage(typingId);
-    chatState.projectType = json.project_type || 'projeto';
-    chatState.outputType = json.output_type === 'imagem' ? 'imagem' : 'texto';
-    chatState.requiresAttachment = !!json.requires_attachment && chatState.attachments.length === 0;
-    chatState.attachmentLabel = json.attachment_label || 'Anexe um arquivo de referência';
-    chatState.questions = json.questions || [];
-    const isCurriculo = /curr[íi]culo|resume|\bcv\b/i.test(chatState.projectType + ' ' + text);
-    chatState.isResume = isCurriculo;
-    if(isCurriculo){
-      chatState.outputType = 'texto';
-      if(!chatState.questions.some(q=>q.id==='layout_curriculo')) chatState.questions.push(LAYOUT_CURRICULO_QUESTION);
-    }
-    chatState.qIndex = 0;
-    chatState.answers = {};
-    if(chatState.questions.length === 0){ await finalizeProject(); return; }
-    postCurrentQuestion();
-    chatState.stage = 'questions';
   }catch(e){
-    removeMessage(typingId);
-    addMessage({ role:'assistant', kind:'text', text: e.quotaExceeded ? e.message : 'Não consegui entender, tenta descrever de outro jeito.' });
-    chatState.stage = 'idle';
+    return false;
   }
 }
 
-function postCurrentQuestion(){
-  const q = chatState.questions[chatState.qIndex];
-  addMessage({ role:'assistant', kind:'options', question: q, answered:false });
-}
+function suggestDestinations(){
+  const text = (state.projectType + ' ' + state.projectInput).toLowerCase();
+  const has = (...words) => words.some(w => text.includes(w));
 
-async function answerQuestion(answerText){
-  const q = chatState.questions[chatState.qIndex];
-  chatState.answers[q.id] = answerText;
-  chatState.qIndex++;
-  if(chatState.qIndex < chatState.questions.length){
-    postCurrentQuestion();
-  } else if(chatState.requiresAttachment && chatState.attachments.length === 0){
-    chatState.stage = 'attachment';
-    addMessage({ role:'assistant', kind:'text', text: chatState.attachmentLabel + ' (use o clipe 📎 aqui embaixo e depois mande qualquer mensagem pra continuar)' });
-  } else {
-    await finalizeProject();
+  if(state.outputType === 'imagem' || has('foto','imagem','design','logo','ilustra','arte','capa','banner','thumbnail')){
+    return [
+      { name: 'Midjourney', icon:'🎨', note: 'Melhor qualidade estética geral', url: 'https://www.midjourney.com/' },
+      { name: 'Ideogram', icon:'🖼️', note: 'Ótimo com texto dentro da imagem', url: 'https://ideogram.ai/' },
+      { name: 'ChatGPT (imagens)', icon:'✨', note: 'Fácil de usar, direto do navegador', url: 'https://chatgpt.com/' },
+      { name: 'Leonardo AI', icon:'🎭', note: 'Bom para estilos artísticos variados', url: 'https://leonardo.ai/' }
+    ];
   }
+  if(has('vídeo','video','reels','tiktok','animação','animacao')){
+    return [
+      { name: 'Runway', icon:'🎬', note: 'Geração e edição de vídeo com IA', url: 'https://runwayml.com/' },
+      { name: 'Pika', icon:'🎞️', note: 'Rápido pra clipes curtos', url: 'https://pika.art/' },
+      { name: 'Sora (OpenAI)', icon:'🌀', note: 'Vídeos mais longos e realistas', url: 'https://openai.com/sora' }
+    ];
+  }
+  if(has('código','codigo','programação','programacao','script','python','javascript','app','api')){
+    return [
+      { name: 'Claude', icon:'🤖', note: 'Ótimo pra código e explicações claras', url: 'https://claude.ai/' },
+      { name: 'ChatGPT', icon:'💬', note: 'Boa opção alternativa', url: 'https://chatgpt.com/' },
+      { name: 'GitHub Copilot', icon:'🧩', note: 'Direto no seu editor de código', url: 'https://github.com/features/copilot' }
+    ];
+  }
+  return [
+    { name: 'Claude', icon:'🤖', note: 'Ótimo pra textos com nuance e contexto', url: 'https://claude.ai/' },
+    { name: 'ChatGPT', icon:'💬', note: 'Rápido e bem conhecido', url: 'https://chatgpt.com/' },
+    { name: 'Gemini', icon:'♊', note: 'Boa opção integrada ao Google', url: 'https://gemini.google.com/' }
+  ];
 }
 
-async function finalizeProject(){
-  chatState.stage = 'busy';
-  const typingId = addMessage({ role:'assistant', kind:'typing' });
+async function copyText(text){
   try{
-    const json = await apiPost('/api/final-prompt', {
-      projectInput: chatState.projectInput,
-      questions: chatState.questions,
-      answers: chatState.answers,
-      attachments: chatState.attachments.length ? chatState.attachments.map(a=>({base64:a.base64, mime:a.mime})) : undefined
-    });
-    chatState.finalPrompt = json.finalPrompt;
-
-    let executedResult = '', executedImageUrl = '', resumeData = null;
-    if(chatState.outputType === 'imagem'){
-      const encoded = encodeURIComponent(chatState.finalPrompt.slice(0,800));
-      executedImageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${randomImageSeed()}`;
-    } else if(chatState.isResume){
-      const r = await apiPost('/api/execute-resume', { finalPrompt: chatState.finalPrompt });
-      resumeData = r.resumeData;
-    } else {
-      const r = await apiPost('/api/execute-text', { finalPrompt: chatState.finalPrompt });
-      executedResult = r.result;
+    await navigator.clipboard.writeText(text);
+    return true;
+  }catch(e){
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    }catch(e2){
+      return false;
     }
+  }
+}
 
-    removeMessage(typingId);
-    addMessage({
-      role:'assistant', kind:'result',
-      payload:{
-        projectInput: chatState.projectInput, projectType: chatState.projectType,
-        outputType: chatState.outputType, isResume: chatState.isResume,
-        finalPrompt: chatState.finalPrompt, executedResult, executedImageUrl, resumeData,
-        attachments: chatState.attachments.slice()
+async function executeResult(){
+  state.executedResult = '';
+  state.executedImageUrl = '';
+  state.resumeData = null;
+  try{
+    if(state.outputType === 'imagem'){
+      const encoded = encodeURIComponent(state.finalPrompt.slice(0, 800));
+      state.executedImageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${randomImageSeed()}`;
+    }else if(state.isResume){
+      const json = await apiPost('/api/execute-resume', { finalPrompt: state.finalPrompt });
+      state.resumeData = json.resumeData;
+    }else{
+      const json = await apiPost('/api/execute-text', { finalPrompt: state.finalPrompt });
+      state.executedResult = json.result;
+    }
+  }catch(e){
+    // se falhar, o app ainda mostra o prompt normalmente como plano B
+  }
+  state.history.unshift({
+    projectType: state.projectType,
+    projectInput: state.projectInput,
+    prompt: state.finalPrompt,
+    outputType: state.outputType,
+    isResume: state.isResume,
+    executedResult: state.executedResult,
+    executedImageUrl: state.executedImageUrl,
+    resumeData: state.resumeData,
+    hadAttachment: state.attachments.length > 0,
+    time: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
+  });
+  if(state.history.length > 10) state.history.pop();
+  updateHistBadge();
+  renderResult();
+}
+
+function renderResult(){
+  state.screen = 'result';
+  renderTrail();
+
+  const hasExecuted = !!(state.executedResult || state.executedImageUrl || state.resumeData);
+  const quickAction = getQuickAction();
+  const quickActionHtml = (quickAction && !state.isResume) ? `
+    <div class="result-actions">
+      <button class="next quick-action" id="quickActionBtn">${quickAction.icon} ${esc(quickAction.label)}</button>
+    </div>
+  ` : '';
+
+  let readyBlockHtml = '';
+  if(state.outputType === 'imagem'){
+    const hasPhotoRef = state.attachments.some(a => a.kind === 'image' || (a.mime||'').startsWith('image/'));
+    readyBlockHtml = `
+      <div class="ready-block">
+        <div class="result-label">resultado diz direito</div>
+        ${hasPhotoRef ? `<div class="note" style="margin-bottom:12px;">⚠️ Você anexou uma foto, mas o gerador gratuito não usa a foto real — ele cria uma imagem nova a partir de uma descrição em texto que a IA fez dela, então o rosto pode sair diferente. Pra manter sua foto de verdade, veja a sugestão abaixo ou envie a foto direto pro ChatGPT/Gemini.</div>` : ''}
+        ${state.executedImageUrl ? `
+          <img src="${state.executedImageUrl}" alt="Resultado gerado" id="resultImg"
+               style="width:100%;border-radius:12px;border:1px solid var(--panel-border);">
+          <div class="note" id="imgErrorNote" style="display:none;">A geração de imagem gratuita falhou dessa vez (isso pode acontecer, é um serviço de terceiros). <span id="retryImgBtn" style="text-decoration:underline;cursor:pointer;color:var(--cyan);">Tentar de novo</span></div>
+          <div class="result-actions"><button class="ghost" id="downloadBtn">⬇️ Baixar imagem</button></div>
+        ` : '<div class="note">Não consegui gerar a imagem agora — tenta de novo em alguns segundos.</div>'}
+      </div>`;
+  }else if(state.isResume && state.resumeData){
+    readyBlockHtml = `
+      <div class="ready-block">
+        <div class="result-label">currículo pronto</div>
+        <p class="hint" style="margin-bottom:14px;">Seu currículo já foi gerado e formatado. Baixe o PDF pronto pra usar.</p>
+        <div class="result-actions"><button class="next" id="downloadBtn">📄 Baixar currículo em PDF</button></div>
+      </div>`;
+  }else if(state.executedResult){
+    readyBlockHtml = `
+      <div class="ready-block">
+        <div class="result-label">resultado pronto</div>
+        <p class="hint" style="margin-bottom:14px;">Seu resultado já foi gerado. Baixe o arquivo pronto pra usar.</p>
+        <div class="result-actions"><button class="next" id="downloadBtn">⬇️ Baixar resultado em PDF</button></div>
+      </div>`;
+  }else{
+    readyBlockHtml = '<div class="note">Não consegui gerar o resultado agora — o prompt abaixo ainda funciona se você colar em outra IA.</div>';
+  }
+
+  cardEl.innerHTML = `
+    <div class="result-badge">🎉 projeto concluído</div>
+    <h1>${state.isResume ? 'Seu currículo tá' : (state.outputType === 'imagem' ? 'Sua imagem tá' : 'Seu resultado tá')} <span>pronto</span>.</h1>
+    <p class="hint">Confira abaixo, ou copie o prompt original pra usar em outro lugar. Os campos em destaque são pra você personalizar.</p>
+
+    ${readyBlockHtml}
+
+    <details style="margin-top:16px;">
+      <summary style="cursor:pointer;color:var(--ink-soft);font-size:13px;font-family:'JetBrains Mono',monospace;">ver o prompt original</summary>
+      <div class="output" id="outputText" contenteditable="true" spellcheck="false" style="margin-top:10px;"></div>
+      <div class="edit-hint">💡 clique no texto acima pra editar antes de copiar</div>
+    </details>
+    ${state.attachments.length > 0 ? '<div class="note">📎 A IA analisou seu(s) anexo(s) pra deixar esse resultado específico pra eles.</div>' : ''}
+    ${quickActionHtml}
+    <div class="result-actions">
+      <button class="ghost" id="copyBtn">Copiar prompt</button>
+      <button class="ghost" id="restartBtn">Criar outro projeto</button>
+    </div>
+    <div class="destinations">
+      <div class="dlabel">onde usar esse prompt</div>
+      <div class="dest-list">
+        ${suggestDestinations().map(d => `
+          <a class="dest" href="${d.url}" target="_blank" rel="noopener">
+            <div>
+              <div class="dname">${d.icon} ${esc(d.name)}</div>
+              <div class="dnote">${esc(d.note)}</div>
+            </div>
+            <span class="arrow">↗</span>
+          </a>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  document.getElementById('outputText').innerHTML = highlightVars(state.finalPrompt);
+
+  const resultImg = document.getElementById('resultImg');
+  if(resultImg){
+    resultImg.addEventListener('error', ()=>{
+      resultImg.style.display = 'none';
+      document.getElementById('imgErrorNote').style.display = 'block';
+    });
+    const retryBtn = document.getElementById('retryImgBtn');
+    if(retryBtn){
+      retryBtn.addEventListener('click', async ()=>{
+        const encoded = encodeURIComponent(state.finalPrompt.slice(0, 800));
+        state.executedImageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${randomImageSeed()}`;
+        renderResult();
+      });
+    }
+  }
+
+  const downloadBtn = document.getElementById('downloadBtn');
+  if(downloadBtn){
+    downloadBtn.addEventListener('click', async ()=>{
+      downloadBtn.disabled = true;
+      const original = downloadBtn.innerHTML;
+      downloadBtn.innerHTML = 'Baixando...';
+      try{
+        if(state.outputType === 'imagem' && state.executedImageUrl){
+          const ok = await downloadImageFile(state.executedImageUrl, 'diz-direito-imagem.jpg');
+          if(!ok){
+            const note = document.getElementById('imgErrorNote');
+            if(note){
+              note.style.display = 'block';
+              note.innerHTML = 'Não consegui baixar automaticamente. Clique com o botão direito na imagem acima e escolha "Salvar imagem como...".';
+            }
+          }
+        }else if(state.isResume && state.resumeData){
+          downloadResumePDF(state.resumeData, 'curriculo-diz-direito.pdf');
+        }else if(state.executedResult){
+          downloadTextAsPDF(state.executedResult, 'diz-direito-resultado.pdf');
+        }
+      }finally{
+        downloadBtn.disabled = false;
+        downloadBtn.innerHTML = original;
       }
     });
-  }catch(e){
-    removeMessage(typingId);
-    addMessage({ role:'assistant', kind:'text', text:'Não consegui gerar o resultado agora. Tenta de novo?' });
   }
-  // reseta pra um novo projeto, mantendo o histórico visível no chat
-  chatState.projectInput=''; chatState.questions=[]; chatState.qIndex=0; chatState.answers={};
-  chatState.requiresAttachment=false; chatState.attachments=[]; chatState.finalPrompt=''; chatState.isResume=false;
-  chatState.stage = 'idle';
-  addMessage({ role:'assistant', kind:'text', text:'Quer criar outro projeto? É só me contar o que você precisa.' });
-}
 
-// ---------- Input bar ----------
-const chatInput = document.getElementById('chatInput');
-const sendBtn = document.getElementById('sendBtn');
-const attachBtn = document.getElementById('attachBtn');
-const fileInput = document.getElementById('fileInput');
-const pendingAttachmentsEl = document.getElementById('pendingAttachments');
-
-chatInput.addEventListener('input', ()=>{
-  chatInput.style.height = 'auto';
-  chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
-});
-chatInput.addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
-});
-sendBtn.addEventListener('click', handleSend);
-attachBtn.addEventListener('click', ()=> fileInput.click());
-
-fileInput.addEventListener('change', async ()=>{
-  for(const file of fileInput.files){
-    const base64 = await fileToBase64(file);
-    const kind = file.type.startsWith('image/') ? 'image' : (file.type==='application/pdf' ? 'pdf' : 'other');
-    chatState.pendingAttachments.push({ base64, mime:file.type, name:file.name, kind });
+  if(quickAction){
+    document.getElementById('quickActionBtn').addEventListener('click', ()=>{
+      window.open(quickAction.url, '_blank', 'noopener');
+    });
   }
-  fileInput.value = '';
-  renderPendingAttachments();
-});
 
-function renderPendingAttachments(){
-  pendingAttachmentsEl.innerHTML = chatState.pendingAttachments.map((a,i)=>`
-    <div class="pending-chip">
-      ${a.kind==='image' ? `<img src="data:${a.mime};base64,${a.base64}">` : (a.kind==='pdf'?'📄':'📎')}
-      <span>${esc(a.name)}</span>
-      <button data-idx="${i}">✕</button>
-    </div>`).join('');
-  pendingAttachmentsEl.querySelectorAll('button').forEach(btn=>{
-    btn.addEventListener('click', ()=>{ chatState.pendingAttachments.splice(+btn.dataset.idx,1); renderPendingAttachments(); });
+  document.getElementById('copyBtn').addEventListener('click', async ()=>{
+    const outputEl = document.getElementById('outputText');
+    const liveText = outputEl.innerText;
+    const b = document.getElementById('copyBtn');
+    const ok = await copyText(liveText);
+    if(ok){
+      b.innerHTML = '<span>Copiado! ✓</span>';
+      setTimeout(()=>{ b.innerHTML = 'Copiar prompt'; }, 1600);
+    }else{
+      b.innerHTML = '<span>Selecionado — use Ctrl+C</span>';
+      const range = document.createRange();
+      range.selectNodeContents(outputEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      setTimeout(()=>{ b.innerHTML = 'Copiar prompt'; }, 2600);
+    }
+  });
+  document.getElementById('restartBtn').addEventListener('click', ()=>{
+    state.attachments = [];
+    renderStart();
   });
 }
 
-async function handleSend(){
-  const text = chatInput.value.trim();
-  const attachmentsToSend = chatState.pendingAttachments.slice();
-  if(!text && attachmentsToSend.length === 0) return;
-  if(chatState.stage === 'busy') return;
-
-  chatInput.value = ''; chatInput.style.height = 'auto';
-  chatState.pendingAttachments = []; renderPendingAttachments();
-
-  if(attachmentsToSend.length){
-    addMessage({ role:'user', kind:'attachments', files: attachmentsToSend });
-    chatState.attachments.push(...attachmentsToSend);
-  }
-  if(text) addMessage({ role:'user', kind:'text', text });
-
-  if(chatState.stage === 'idle'){
-    if(text) await beginProject(text);
-  } else if(chatState.stage === 'questions'){
-    if(text) await answerQuestion(text);
-  } else if(chatState.stage === 'attachment'){
-    await finalizeProject();
-  }
-}
-
-document.getElementById('newChatBtn').addEventListener('click', ()=>{
-  chatState.messages = [];
-  chatState.stage = 'idle';
-  chatState.projectInput=''; chatState.questions=[]; chatState.qIndex=0; chatState.answers={};
-  chatState.requiresAttachment=false; chatState.attachments=[]; chatState.finalPrompt=''; chatState.isResume=false;
-  greet();
-});
-
-greet();
-
-// Assinatura via Mercado Pago
-function assinarPlano(){ window.location.href = 'https://mpago.la/1QJWxMQ'; }
-
-window.addEventListener('DOMContentLoaded', () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const status = urlParams.get('status') || urlParams.get('collection_status');
-  if(status === 'approved'){
-    const dataExpiracao = new Date();
-    dataExpiracao.setDate(dataExpiracao.getDate() + 30);
-    localStorage.setItem('dizDireitoAssinante', 'ativo');
-    localStorage.setItem('dizDireitoValidade', dataExpiracao.toISOString());
-    window.history.replaceState({}, document.title, window.location.pathname);
-    alert('🎉 Pagamento aprovado com sucesso! Seu acesso ilimitado por 30 dias está ativo.');
-  }
-  const statusAssinatura = localStorage.getItem('dizDireitoAssinante');
-  const validade = localStorage.getItem('dizDireitoValidade');
-  const botaoAssinar = document.getElementById('subscribeBtn');
-  if(statusAssinatura === 'ativo' && validade){
-    if(new Date(validade) > new Date()){
-      if(botaoAssinar){ botaoAssinar.innerText = '⭐ Ativo'; botaoAssinar.classList.add('subscribe-active'); }
-    }else{
-      localStorage.removeItem('dizDireitoAssinante');
-      localStorage.removeItem('dizDireitoValidade');
-    }
-  }
-});
+renderStart();
 </script>
 </body>
 </html>
