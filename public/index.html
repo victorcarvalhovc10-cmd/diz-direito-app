@@ -84,7 +84,7 @@
     98%, 100%{ opacity:0; transform:translateX(56px) translateY(4px); }
   }
 
-  .app{ width:100%; max-width: 560px; }
+  .app{ width:100%; max-width: 640px; }
 
   .brand{
     display:flex; align-items:center; justify-content:space-between; gap:14px;
@@ -177,7 +177,7 @@
     outline:none;
     resize: vertical;
   }
-  textarea{ min-height: 96px; }
+  textarea{ min-height: 120px; }
   textarea:focus, input[type=text]:focus{ border-color: var(--violet); box-shadow: 0 0 0 3px rgba(139,92,246,0.18); }
   textarea::placeholder, input::placeholder{ color:#5F5C77; }
 
@@ -318,6 +318,15 @@
     background:none; border:none; color: var(--ink-soft); cursor:pointer; font-size:12px; padding:2px;
   }
   .attach-chip-remove:hover{ color: var(--pink); }
+
+  .suggest-chips{ display:flex; flex-wrap:wrap; gap:8px; margin: 4px 0 14px; }
+  .suggest-chip{
+    font-family:'Inter', sans-serif; font-size:12.5px;
+    padding: 7px 13px; border-radius: 100px;
+    border: 1px solid var(--panel-border); background: rgba(255,255,255,0.03);
+    color: var(--ink-soft); cursor:pointer; transition: all .15s ease;
+  }
+  .suggest-chip:hover{ border-color: var(--violet); color: var(--ink); }
 
   .dropzone{
     border: 1.5px dashed var(--panel-border);
@@ -575,7 +584,7 @@ function renderStart(){
     <div class="kicker">passo 1 — o que você quer criar</div>
     <h1>Me conta o que <span>você precisa</span>.</h1>
     <p class="hint">Pode ser qualquer coisa: uma foto pro Instagram, um anúncio, um código, um texto de venda, um vídeo. A gente descobre o resto juntos.</p>
-    <textarea id="startInput" placeholder="Ex: quero criar uma foto legal para postar no Instagram"></textarea>
+    <textarea id="startInput" placeholder="Diz o que precisa!"></textarea>
     <div class="error" id="startError">Escreve alguma coisa primeiro :)</div>
 
     <label class="dropzone dropzone-compact" id="startDropzone">
@@ -716,47 +725,64 @@ function renderQuestion(){
   state.screen = 'question';
   renderTrail();
   const q = state.questions[state.stepIndex];
-  const total = state.questions.length;
-  const current = state.answers[q.id] || null;
+  const isVisualLayout = q.options.some(o => o.svg);
+  const current = state.answers[q.id] || '';
 
-  let optsHtml = q.options.map((o,i) => `
-    <div class="opt${o.svg ? ' opt-visual' : ''}${current===o.label?' sel':''}" data-label="${esc(o.label)}">
-      ${o.svg ? `<span class="ic-visual">${o.svg}</span>` : `<span class="ic">${o.icon||'✨'}</span>`}<span>${esc(o.label)}</span>
-    </div>
-  `).join('');
-
-  cardEl.innerHTML = `
-    <div class="kicker">pergunta ${state.stepIndex+1} — ${esc(state.projectType)}</div>
-    <h1>${esc(q.label)}</h1>
-    <p class="hint">Escolhe a opção que mais combina, ou descreve com suas palavras.</p>
-    <div class="options">
-      ${optsHtml}
-      <div class="opt custom" id="customOpt">
-        <span class="ic">✏️</span><input type="text" id="customInput" placeholder="Outro... (digite aqui)">
+  if(isVisualLayout){
+    // exceção: a pergunta de layout do currículo continua com os mini-desenhos clicáveis
+    const optsHtml = q.options.map(o => `
+      <div class="opt opt-visual${current===o.label?' sel':''}" data-label="${esc(o.label)}">
+        <span class="ic-visual">${o.svg}</span><span>${esc(o.label)}</span>
       </div>
-    </div>
-    <div class="grow"></div>
-    <div class="nav">
-      <button class="back" id="backBtn">${state.stepIndex===0 ? '← voltar ao início' : '← voltar'}</button>
-      <button class="next" id="nextBtn" ${current?'':'disabled'}><span class="spinner"></span><span>Próxima</span></button>
-    </div>
-  `;
-
-  cardEl.querySelectorAll('.opt:not(.custom)').forEach(el=>{
-    el.addEventListener('click', ()=>{
-      state.answers[q.id] = el.dataset.label;
-      document.getElementById('customInput').value = '';
-      renderQuestion();
+    `).join('');
+    cardEl.innerHTML = `
+      <div class="kicker">pergunta ${state.stepIndex+1} — ${esc(state.projectType)}</div>
+      <h1>${esc(q.label)}</h1>
+      <p class="hint">Escolhe a opção que mais combina.</p>
+      <div class="options">${optsHtml}</div>
+      <div class="grow"></div>
+      <div class="nav">
+        <button class="back" id="backBtn">${state.stepIndex===0 ? '← voltar ao início' : '← voltar'}</button>
+        <button class="next" id="nextBtn" ${current?'':'disabled'}><span class="spinner"></span><span>Próxima</span></button>
+      </div>
+    `;
+    cardEl.querySelectorAll('.opt').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        state.answers[q.id] = el.dataset.label;
+        renderQuestion();
+      });
     });
-  });
-
-  const customInput = document.getElementById('customInput');
-  customInput.addEventListener('input', ()=>{
-    const v = customInput.value.trim();
-    state.answers[q.id] = v || null;
-    document.getElementById('nextBtn').disabled = !v;
-    cardEl.querySelectorAll('.opt:not(.custom)').forEach(o=>o.classList.remove('sel'));
-  });
+  } else {
+    // padrão: conversa de verdade — pergunta em texto, você digita a resposta no campo
+    const chipsHtml = q.options.map(o => `
+      <div class="suggest-chip" data-label="${esc(o.label)}">${o.icon||'✨'} ${esc(o.label)}</div>
+    `).join('');
+    cardEl.innerHTML = `
+      <div class="kicker">pergunta ${state.stepIndex+1} — ${esc(state.projectType)}</div>
+      <h1>${esc(q.label)}</h1>
+      <p class="hint">Responde com suas palavras, ou clica numa sugestão pra preencher rapidinho.</p>
+      <div class="suggest-chips">${chipsHtml}</div>
+      <textarea id="answerInput" placeholder="Digite sua resposta aqui...">${esc(current)}</textarea>
+      <div class="grow"></div>
+      <div class="nav">
+        <button class="back" id="backBtn">${state.stepIndex===0 ? '← voltar ao início' : '← voltar'}</button>
+        <button class="next" id="nextBtn" ${current?'':'disabled'}><span class="spinner"></span><span>Continuar</span></button>
+      </div>
+    `;
+    const answerInput = document.getElementById('answerInput');
+    answerInput.addEventListener('input', ()=>{
+      const v = answerInput.value.trim();
+      state.answers[q.id] = v || null;
+      document.getElementById('nextBtn').disabled = !v;
+    });
+    cardEl.querySelectorAll('.suggest-chip').forEach(chip=>{
+      chip.addEventListener('click', ()=>{
+        answerInput.value = chip.dataset.label;
+        answerInput.dispatchEvent(new Event('input'));
+        answerInput.focus();
+      });
+    });
+  }
 
   document.getElementById('backBtn').addEventListener('click', ()=>{
     if(state.stepIndex===0){ renderStart(); }
@@ -1198,12 +1224,12 @@ function renderResult(){
   cardEl.innerHTML = `
     <div class="result-badge">🎉 projeto concluído</div>
     <h1>${state.isResume ? 'Seu currículo tá' : (state.outputType === 'imagem' ? 'Sua imagem tá' : 'Seu resultado tá')} <span>pronto</span>.</h1>
-    <p class="hint">Confira abaixo, ou copie o prompt original pra usar em outro lugar. Os campos em destaque são pra você personalizar.</p>
+    <p class="hint">Confira o resultado abaixo. Se preferir, também deixamos pronto um prompt otimizado pra você usar em outra IA — é só abrir "ver o prompt" e copiar, ou clicar direto num dos links sugeridos.</p>
 
     ${readyBlockHtml}
 
     <details style="margin-top:16px;">
-      <summary style="cursor:pointer;color:var(--ink-soft);font-size:13px;font-family:'JetBrains Mono',monospace;">ver o prompt original</summary>
+      <summary style="cursor:pointer;color:var(--ink-soft);font-size:13px;font-family:'JetBrains Mono',monospace;">ver o prompt (pra usar em outra IA)</summary>
       <div class="output" id="outputText" contenteditable="true" spellcheck="false" style="margin-top:10px;"></div>
       <div class="edit-hint">💡 clique no texto acima pra editar antes de copiar</div>
     </details>
