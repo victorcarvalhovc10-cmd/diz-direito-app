@@ -75,6 +75,52 @@ app.get('/api/quota', (req, res) => {
   res.json({ limit: FREE_LIMIT_PER_DAY, used, remaining: Math.max(0, FREE_LIMIT_PER_DAY - used) });
 });
 
+app.post('/api/next-question', async (req, res) => {
+  try {
+    const { projectInput, previousQA } = req.body;
+    const isFirst = !Array.isArray(previousQA) || previousQA.length === 0;
+    const countSoFar = isFirst ? 0 : previousQA.length;
+    const MIN_Q = 3, MAX_Q = 5;
+
+    let system, content;
+
+    if (isFirst) {
+      system = `Você conduz uma entrevista adaptativa, uma pergunta de cada vez, pra montar o prompt de IA perfeito depois. Gere APENAS a PRIMEIRA pergunta, específica pro tipo de projeto (não genérica), com 4 a 6 opções curtas (2-4 palavras) cada uma com emoji representativo.
+Classifique também o pedido: "project_type" (nome curto do tipo de projeto), "output_type" ("imagem" quando o resultado final é uma imagem/foto/design, ou "texto" quando é texto/código/roteiro/documento), "requires_attachment" (true se normalmente precisa de um arquivo de referência tipo foto ou documento antigo, senão false) e "attachment_label" (frase curta pedindo o anexo certo, só se requires_attachment for true).
+Caso especial — se for currículo/CV: a entrevista deve cobrir ao longo das perguntas (não precisa ser tudo na primeira): cargo/área desejada, nível de experiência, habilidades técnicas, formação, conquistas mensuráveis, e o estilo de layout (onde fica a foto: topo, lateral, sem foto, canto).
+Responda APENAS com JSON válido, sem markdown:
+{"project_type":"...", "output_type":"texto", "requires_attachment":false, "attachment_label":"", "question":{"id":"slug_curto","label":"pergunta","options":[{"label":"opção","icon":"emoji"}]}}`;
+      content = projectInput;
+    } else {
+      const historyText = previousQA.map(qa => `${qa.label}: ${qa.answer}`).join('\n');
+      system = `Você está no meio de uma entrevista adaptativa pra montar o prompt de IA perfeito. Já foram feitas e respondidas ${countSoFar} pergunta(s). Avalie o que já se sabe e decida:
+- Se já há contexto suficiente (mínimo ${MIN_Q} perguntas já respondidas) e nenhuma lacuna importante ficou faltando, retorne {"done": true}.
+- Caso contrário, gere a PRÓXIMA pergunta mais relevante considerando especificamente as respostas já dadas (não repita perguntas nem temas já cobertos), com 4 a 6 opções curtas com emoji. NUNCA ultrapasse ${MAX_Q} perguntas no total — se já chegou em ${MAX_Q}, retorne {"done": true} mesmo que reste alguma dúvida menor.
+Responda APENAS com JSON válido, sem markdown:
+{"done": false, "question": {"id":"slug_curto","label":"pergunta","options":[{"label":"opção","icon":"emoji"}]}}
+ou, se decidir encerrar:
+{"done": true}`;
+      content = `Pedido original: ${projectInput}\n\nRespostas até agora:\n${historyText}`;
+    }
+
+    // consome a cota de uso gratuito só na primeira pergunta de cada projeto
+    if (isFirst) {
+      const quota = checkAndConsumeQuota(req.deviceId);
+      if (!quota.allowed) {
+        return res.status(429).json({ error: 'limite_gratuito_atingido', message: 'Você usou seus prompts gratuitos de hoje. Volte amanhã ou assine o plano completo.' });
+      }
+    }
+
+    const { text: raw } = await callClaude({ system, content });
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const json = JSON.parse(clean);
+    res.json(json);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'erro_interno', message: 'Não consegui gerar a próxima pergunta. Tenta de novo.' });
+  }
+});
+
 app.post('/api/questions', async (req, res) => {
   const quota = checkAndConsumeQuota(req.deviceId);
   if (!quota.allowed) {

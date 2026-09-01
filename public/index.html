@@ -361,17 +361,6 @@
   .dest .dnote{ font-size:12px; color: var(--ink-soft); margin-top:2px; }
   .dest .arrow{ color: var(--cyan); font-size:16px; }
 
-  .subscribe-btn{
-    background: transparent; color: var(--ink-soft); border: 1px solid var(--panel-border);
-    padding: 9px 18px; border-radius: 100px; font-family:'Space Grotesk', sans-serif;
-    font-weight: 600; font-size: 13px; cursor: pointer; transition: all .15s ease;
-  }
-  .subscribe-btn:hover{ border-color: var(--violet); color: var(--ink); }
-  .subscribe-active{
-    background: linear-gradient(120deg, #22C55E, #16A34A) !important;
-    color: #fff !important; border-color: transparent !important;
-  }
-
   footer{
     text-align:center; margin-top:26px;
     font-family:'JetBrains Mono', monospace; font-size:11.5px; color: #514F68;
@@ -387,48 +376,56 @@
   <div class="trail" id="trail"></div>
   <div class="card" id="card"><!-- injected --></div>
   <footer>protótipo de validação · powered by IA</footer>
-
-  <div style="text-align:center; margin:22px 0 6px;">
-    <button id="subscribeBtn" onclick="assinarPlano()" class="subscribe-btn">⭐ Seja um Assinante</button>
-  </div>
+<!-- Botão Seja um Assinante no rodapé -->
+<div style="text-align: center; margin: 30px 0 10px 0;">
+  <button onclick="assinarPlano()" style="background: transparent; color: var(--ink-soft); border: 1px solid var(--panel-border); padding: 8px 16px; border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 13px; transition: all 0.2s;">
+    ⭐ Seja um Assinante
+  </button>
 </div>
 
 <script>
-  // Direciona pro link oficial de assinatura no Mercado Pago
-  function assinarPlano(){
+  // Função que direciona o cliente para o link oficial de assinatura do Mercado Pago
+  function assinarPlano() {
     window.location.href = 'https://mpago.la/1QJWxMQ';
   }
 
+  // Verifica se o usuário acabou de voltar de um pagamento aprovado
   window.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const status = urlParams.get('status') || urlParams.get('collection_status');
 
-    if(status === 'approved'){
+    if (status === 'approved') {
       const dataExpiracao = new Date();
       dataExpiracao.setDate(dataExpiracao.getDate() + 30);
+      
       localStorage.setItem('dizDireitoAssinante', 'ativo');
       localStorage.setItem('dizDireitoValidade', dataExpiracao.toISOString());
+
       window.history.replaceState({}, document.title, window.location.pathname);
       alert('🎉 Pagamento aprovado com sucesso! Seu acesso ilimitado por 30 dias está ativo.');
     }
 
+    // Verifica validade do acesso
     const statusAssinatura = localStorage.getItem('dizDireitoAssinante');
     const validade = localStorage.getItem('dizDireitoValidade');
-    const botaoAssinar = document.getElementById('subscribeBtn');
 
-    if(statusAssinatura === 'ativo' && validade){
-      if(new Date(validade) > new Date()){
-        if(botaoAssinar){
+    if (statusAssinatura === 'ativo' && validade) {
+      const hoje = new Date();
+      if (new Date(validade) > hoje) {
+        const botaoAssinar = document.querySelector('button[onclick="assinarPlano()"]');
+        if (botaoAssinar) {
           botaoAssinar.innerText = '⭐ Assinatura Ativa (Ilimitado)';
-          botaoAssinar.classList.add('subscribe-active');
+          botaoAssinar.style.background = '#28a745';
+          botaoAssinar.style.color = '#fff';
         }
-      }else{
+      } else {
         localStorage.removeItem('dizDireitoAssinante');
         localStorage.removeItem('dizDireitoValidade');
       }
     }
   });
 </script>
+</div>
 
 <script>
 const state = { screen: 'start', projectInput: '', projectType: '', outputType: 'texto', isResume: false, questions: [], stepIndex: 0, answers: {}, finalPrompt: '', requiresAttachment: false, attachmentLabel: '', attachments: [], history: [], executedResult: '', executedImageUrl: '', resumeData: null };
@@ -628,31 +625,63 @@ async function startFlow(){
   btn.disabled = true; btn.classList.add('loading');
 
   try{
-    const json = await apiPost('/api/questions', { projectInput: val });
+    const json = await apiPost('/api/next-question', { projectInput: val, previousQA: [] });
     state.projectType = json.project_type || 'projeto';
-    state.questions = json.questions || [];
     state.requiresAttachment = !!json.requires_attachment && state.attachments.length === 0;
     state.outputType = json.output_type === 'imagem' ? 'imagem' : 'texto';
     state.attachmentLabel = json.attachment_label || 'Anexe um arquivo de referência';
 
-    // se o projeto for currículo, garante uma pergunta visual de layout e força saída como texto/PDF
     const isCurriculo = /curr[íi]culo|resume|\bcv\b/i.test(state.projectType + ' ' + val);
     state.isResume = isCurriculo;
     if(isCurriculo){
       state.outputType = 'texto'; // currículo nunca deve ser roteado pra geração de imagem
-      if(!state.questions.some(q => q.id === 'layout_curriculo')){
-        state.questions.push(LAYOUT_CURRICULO_QUESTION);
-      }
     }
 
+    if(!json.question) throw new Error('sem pergunta');
+    state.questions = [json.question];
     state.stepIndex = 0;
     state.answers = {};
-    if(state.questions.length === 0) throw new Error('sem perguntas');
     renderQuestion();
   }catch(e){
     btn.disabled = false; btn.classList.remove('loading');
     errEl.textContent = e.quotaExceeded ? e.message : 'Não consegui entender, tenta descrever de outro jeito.';
     errEl.classList.add('show');
+  }
+}
+
+function buildPreviousQA(){
+  return state.questions.slice(0, state.stepIndex+1).map(q => ({ label: q.label, answer: state.answers[q.id] }));
+}
+
+async function fetchNextQuestionOrFinish(){
+  // pergunta de layout do currículo é garantida, sem precisar de mais uma chamada à IA
+  if(state.isResume && !state.questions.some(q => q.id === 'layout_curriculo')){
+    state.questions.push(LAYOUT_CURRICULO_QUESTION);
+    state.stepIndex++;
+    renderQuestion();
+    return;
+  }
+  try{
+    const json = await apiPost('/api/next-question', { projectInput: state.projectInput, previousQA: buildPreviousQA() });
+    if(json.done || !json.question){
+      afterQuestionsDone();
+    }else{
+      state.questions.push(json.question);
+      state.stepIndex++;
+      renderQuestion();
+    }
+  }catch(e){
+    // se a próxima pergunta falhar, segue direto pro resultado com o que já foi respondido
+    afterQuestionsDone();
+  }
+}
+
+function afterQuestionsDone(){
+  if(state.requiresAttachment){
+    state.stepIndex++;
+    renderAttachment();
+  }else{
+    generateFinal();
   }
 }
 
@@ -697,7 +726,7 @@ function renderQuestion(){
   `).join('');
 
   cardEl.innerHTML = `
-    <div class="kicker">passo ${state.stepIndex+2} de ${total+2} — ${esc(state.projectType)}</div>
+    <div class="kicker">pergunta ${state.stepIndex+1} — ${esc(state.projectType)}</div>
     <h1>${esc(q.label)}</h1>
     <p class="hint">Escolhe a opção que mais combina, ou descreve com suas palavras.</p>
     <div class="options">
@@ -709,7 +738,7 @@ function renderQuestion(){
     <div class="grow"></div>
     <div class="nav">
       <button class="back" id="backBtn">${state.stepIndex===0 ? '← voltar ao início' : '← voltar'}</button>
-      <button class="next" id="nextBtn" ${current?'':'disabled'}><span class="spinner"></span><span>${state.stepIndex===total-1?(state.requiresAttachment?'Próxima':'Ver resultado'):'Próxima'}</span></button>
+      <button class="next" id="nextBtn" ${current?'':'disabled'}><span class="spinner"></span><span>Próxima</span></button>
     </div>
   `;
 
@@ -734,16 +763,10 @@ function renderQuestion(){
     else{ state.stepIndex--; renderQuestion(); }
   });
 
-  document.getElementById('nextBtn').addEventListener('click', ()=>{
-    if(state.stepIndex < total-1){
-      state.stepIndex++;
-      renderQuestion();
-    }else if(state.requiresAttachment){
-      state.stepIndex++;
-      renderAttachment();
-    }else{
-      generateFinal();
-    }
+  document.getElementById('nextBtn').addEventListener('click', async ()=>{
+    const nextBtn = document.getElementById('nextBtn');
+    nextBtn.disabled = true; nextBtn.classList.add('loading');
+    await fetchNextQuestionOrFinish();
   });
 }
 
@@ -759,9 +782,8 @@ function fileToBase64(file){
 function renderAttachment(){
   state.screen = 'attachment';
   renderTrail();
-  const total = state.questions.length;
   cardEl.innerHTML = `
-    <div class="kicker">passo ${total+2} de ${total+3} — anexo</div>
+    <div class="kicker">último passo — anexo</div>
     <h1>${esc(state.attachmentLabel)}</h1>
     <p class="hint">A IA vai analisar o arquivo pra deixar o prompt final bem específico pra ele.</p>
     <label class="dropzone" id="dropzone">
