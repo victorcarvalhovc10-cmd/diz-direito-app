@@ -9,6 +9,7 @@ app.use(express.json({ limit: '25mb' })); // 25mb pra caber múltiplos anexos
 app.use(express.static(path.join(__dirname, 'public')));
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''; // opcional — habilita edição de imagem de verdade (preserva a foto real)
 const MODEL = 'claude-sonnet-4-6'; // troque se precisar de outra versão
 const FREE_LIMIT_PER_DAY = parseInt(process.env.FREE_LIMIT_PER_DAY || '8', 10);
 
@@ -216,11 +217,60 @@ app.post('/api/execute-text', async (req, res) => {
   }
 });
 
+app.get('/api/image-provider', (req, res) => {
+  res.json({ geminiAvailable: !!GEMINI_API_KEY });
+});
+
+app.post('/api/generate-image', async (req, res) => {
+  if (!GEMINI_API_KEY) {
+    return res.status(400).json({ error: 'gemini_nao_configurado', message: 'Chave do Gemini não configurada nesse servidor.' });
+  }
+  try {
+    const { prompt, attachments } = req.body;
+    const imageAttachments = Array.isArray(attachments) ? attachments.filter(a => a && a.base64 && (a.mime || '').startsWith('image/')) : [];
+
+    const parts = [{ text: prompt }];
+    imageAttachments.forEach(a => {
+      parts.push({ inlineData: { mimeType: a.mime, data: a.base64 } });
+    });
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts }] })
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Gemini API error:', errText);
+      return res.status(502).json({ error: 'gemini_erro', message: 'O editor de imagem não respondeu corretamente.' });
+    }
+
+    const data = await response.json();
+    const resultParts = data?.candidates?.[0]?.content?.parts || [];
+    const imagePart = resultParts.find(p => p.inlineData || p.inline_data);
+    const inline = imagePart && (imagePart.inlineData || imagePart.inline_data);
+
+    if (!inline) {
+      return res.status(502).json({ error: 'sem_imagem', message: 'O editor de imagem não devolveu uma imagem dessa vez.' });
+    }
+
+    res.json({ base64: inline.data, mime: inline.mimeType || inline.mime_type || 'image/png' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'erro_interno', message: 'Não consegui editar a imagem agora.' });
+  }
+});
+
 app.post('/api/execute-resume', async (req, res) => {
   try {
     const { finalPrompt } = req.body;
     const system = `Você é um especialista em currículos profissionais. Com base no pedido a seguir, gere o conteúdo completo de um currículo profissional otimizado, com linguagem objetiva, verbos de ação e resultados mensuráveis nos pontos de experiência sempre que fizer sentido.
 Para campos de dado pessoal que não foram informados (nome, e-mail, telefone), use um placeholder entre colchetes, ex: [Seu nome], [seu@email.com].
+IMPORTANTE: o VALOR de cada campo deve ser texto puro, sem markdown — nunca use **negrito**, *itálico*, # títulos ou qualquer símbolo de formatação dentro dos textos.
 Responda APENAS com JSON válido, compacto, sem markdown, sem comentários, neste formato exato:
 {"name":"...", "title":"...", "contact":"...", "summary":"...", "experience":[{"role":"...","company":"...","period":"...","bullets":["...","..."]}], "education":[{"degree":"...","institution":"...","period":"..."}], "skills":["...","..."]}`;
     const { text: raw } = await callClaude({ system, content: finalPrompt, maxTokens: 3000 });
