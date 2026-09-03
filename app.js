@@ -270,15 +270,29 @@ app.post('/api/execute-presentation', async (req, res) => {
     const { finalPrompt } = req.body;
     const system = `Você é um especialista em criar apresentações profissionais. Com base no pedido a seguir, gere o conteúdo completo de uma apresentação em slides, com título forte, conteúdo objetivo e bem distribuído (nada de slides lotados de texto — poucos bullets curtos por slide).
 IMPORTANTE: todo texto deve ser puro, sem markdown (sem **negrito**, sem # títulos, sem símbolos de formatação).
-Gere entre 6 e 12 slides, dependendo da complexidade do pedido.
+Gere entre 6 e 10 slides, dependendo da complexidade do pedido. Seja conciso em cada bullet (máximo uma frase curta).
 Responda APENAS com JSON válido, compacto, sem markdown, sem comentários, neste formato exato:
 {"title": "título da apresentação", "slides": [{"title": "título do slide", "bullets": ["ponto 1", "ponto 2"], "notes": "observações do apresentador, opcional"}]}`;
-    const { text: raw } = await callClaude({ system, content: finalPrompt, maxTokens: 3000 });
+    const { text: raw } = await callClaude({ system, content: finalPrompt, maxTokens: 6000 });
     let clean = raw.replace(/```json|```/g, '').trim();
     const firstBrace = clean.indexOf('{');
     const lastBrace = clean.lastIndexOf('}');
     if (firstBrace !== -1 && lastBrace !== -1) clean = clean.slice(firstBrace, lastBrace + 1);
-    const presentationData = JSON.parse(clean);
+    let presentationData;
+    try {
+      presentationData = JSON.parse(clean);
+    } catch (parseErr) {
+      // fallback: tenta recuperar só os slides que já vieram completos antes do corte
+      const partialSlides = [];
+      const slideMatches = clean.matchAll(/\{\s*"title"\s*:\s*"([^"]*)"\s*,\s*"bullets"\s*:\s*\[([^\]]*)\]/g);
+      for (const m of slideMatches) {
+        const bullets = (m[2].match(/"([^"]*)"/g) || []).map(s => s.slice(1, -1));
+        if (m[1] && bullets.length) partialSlides.push({ title: m[1], bullets, notes: '' });
+      }
+      presentationData = partialSlides.length
+        ? { title: 'Apresentação', slides: partialSlides }
+        : { title: 'Apresentação', slides: [{ title: 'Resumo', bullets: [raw.replace(/```json|```/g, '').trim().slice(0, 300)], notes: '' }] };
+    }
     res.json({ presentationData });
   } catch (err) {
     console.error(err);

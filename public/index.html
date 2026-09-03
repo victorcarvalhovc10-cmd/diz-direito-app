@@ -811,7 +811,11 @@ function renderQuestion(){
   }
 
   document.getElementById('backBtn').addEventListener('click', ()=>{
-    if(state.stepIndex===0){ renderStart(); }
+    if(state.stepIndex===0){
+      state.isResume = false; state.isPresentation = false;
+      state.resumeData = null; state.presentationData = null;
+      renderStart();
+    }
     else{ state.stepIndex--; renderQuestion(); }
   });
 
@@ -924,6 +928,7 @@ async function generateFinal(){
 }
 
 function getQuickAction(){
+  if(state.isResume || state.isPresentation) return null; // essas categorias têm ação própria de download, não precisam de sugestão externa
   const text = (state.projectType + ' ' + state.projectInput).toLowerCase();
   const has = (...words) => words.some(w => text.includes(w));
 
@@ -1226,6 +1231,19 @@ function suggestDestinations(){
   const text = (state.projectType + ' ' + state.projectInput).toLowerCase();
   const has = (...words) => words.some(w => text.includes(w));
 
+  if(state.isPresentation){
+    return [
+      { name: 'Canva', icon:'🎨', note: 'Fácil de editar e já tem templates prontos', url: 'https://www.canva.com/' },
+      { name: 'Gamma', icon:'✨', note: 'Cria apresentações inteiras com IA', url: 'https://gamma.app/' },
+      { name: 'Google Slides', icon:'📊', note: 'Gratuito, direto do navegador', url: 'https://slides.google.com/' }
+    ];
+  }
+  if(state.isResume){
+    return [
+      { name: 'Claude', icon:'🤖', note: 'Bom pra ajustar o texto do currículo', url: 'https://claude.ai/' },
+      { name: 'ChatGPT', icon:'💬', note: 'Alternativa rápida pra ajustes', url: 'https://chatgpt.com/' }
+    ];
+  }
   if(state.outputType === 'imagem' || has('foto','imagem','design','logo','ilustra','arte','capa','banner','thumbnail')){
     return [
       { name: 'Midjourney', icon:'🎨', note: 'Melhor qualidade estética geral', url: 'https://www.midjourney.com/' },
