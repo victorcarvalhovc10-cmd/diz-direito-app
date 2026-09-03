@@ -265,6 +265,27 @@ app.post('/api/generate-image', async (req, res) => {
   }
 });
 
+app.post('/api/execute-presentation', async (req, res) => {
+  try {
+    const { finalPrompt } = req.body;
+    const system = `Você é um especialista em criar apresentações profissionais. Com base no pedido a seguir, gere o conteúdo completo de uma apresentação em slides, com título forte, conteúdo objetivo e bem distribuído (nada de slides lotados de texto — poucos bullets curtos por slide).
+IMPORTANTE: todo texto deve ser puro, sem markdown (sem **negrito**, sem # títulos, sem símbolos de formatação).
+Gere entre 6 e 12 slides, dependendo da complexidade do pedido.
+Responda APENAS com JSON válido, compacto, sem markdown, sem comentários, neste formato exato:
+{"title": "título da apresentação", "slides": [{"title": "título do slide", "bullets": ["ponto 1", "ponto 2"], "notes": "observações do apresentador, opcional"}]}`;
+    const { text: raw } = await callClaude({ system, content: finalPrompt, maxTokens: 3000 });
+    let clean = raw.replace(/```json|```/g, '').trim();
+    const firstBrace = clean.indexOf('{');
+    const lastBrace = clean.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) clean = clean.slice(firstBrace, lastBrace + 1);
+    const presentationData = JSON.parse(clean);
+    res.json({ presentationData });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'erro_interno', message: 'Não consegui montar a apresentação. Tenta de novo.' });
+  }
+});
+
 app.post('/api/execute-resume', async (req, res) => {
   try {
     const { finalPrompt } = req.body;
