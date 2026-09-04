@@ -187,13 +187,15 @@ Responda APENAS com o prompt final, texto puro, sem explicações, sem markdown,
 app.post('/api/execute-text', async (req, res) => {
   try {
     const { finalPrompt } = req.body;
-    const system = 'Responda ao pedido abaixo da melhor forma possível, com qualidade profissional, pronto para uso. Se o conteúdo pedido for extenso (ex: apostila, guia completo, material longo), pode escrever bastante — não resuma demais.';
+    const system = `Responda ao pedido abaixo da melhor forma possível, com qualidade profissional, pronto para uso.
+Antes de começar, avalie mentalmente se o conteúdo completo e ideal cabe com folga no espaço de resposta disponível. Se sim, escreva o quanto for necessário, sem resumir demais — pode escrever bastante se o pedido pedir algo extenso (ex: apostila, guia completo, material longo, petição, contrato).
+Se avaliar que o conteúdo ideal NÃO caberia por completo, priorize entregar uma versão mais condensada mas COMPLETA — nunca termine no meio de uma frase, de um argumento, de uma seção ou sem a conclusão/fechamento apropriado (ex: uma petição sem pedido final e fecho, um contrato sem assinatura, um texto sem conclusão). É sempre melhor um documento mais curto e inteiro do que um documento mais longo e cortado.`;
     const messages = [{ role: 'user', content: finalPrompt }];
     let fullText = '';
     let stopReason = null;
     const MAX_ROUNDS = 4;
-    const ROUND_MAX_TOKENS = 3000;
-    const TIME_BUDGET_MS = 42000; // fica com folga dentro do limite de 60s do Vercel
+    const ROUND_MAX_TOKENS = 4500;
+    const TIME_BUDGET_MS = 46000; // fica com folga dentro do limite de 60s do Vercel
     const startedAt = Date.now();
 
     for (let round = 0; round < MAX_ROUNDS; round++) {
@@ -207,7 +209,7 @@ app.post('/api/execute-text', async (req, res) => {
       if (stopReason !== 'max_tokens') break;
       // pede pra continuar exatamente de onde parou
       messages.push({ role: 'assistant', content: text });
-      messages.push({ role: 'user', content: 'Continue exatamente de onde parou, sem repetir o que já foi escrito e sem reintroduzir o assunto.' });
+      messages.push({ role: 'user', content: 'Continue exatamente de onde parou, sem repetir o que já foi escrito e sem reintroduzir o assunto. Se estiver perto do fim, conclua o documento de forma completa e apropriada.' });
     }
 
     res.json({ result: fullText, truncated: stopReason === 'max_tokens' || stopReason === 'time_budget' });
@@ -306,9 +308,10 @@ app.post('/api/execute-resume', async (req, res) => {
     const system = `Você é um especialista em currículos profissionais. Com base no pedido a seguir, gere o conteúdo completo de um currículo profissional otimizado, com linguagem objetiva, verbos de ação e resultados mensuráveis nos pontos de experiência sempre que fizer sentido.
 Para campos de dado pessoal que não foram informados (nome, e-mail, telefone), use um placeholder entre colchetes, ex: [Seu nome], [seu@email.com].
 IMPORTANTE: o VALOR de cada campo deve ser texto puro, sem markdown — nunca use **negrito**, *itálico*, # títulos ou qualquer símbolo de formatação dentro dos textos.
+Se houver muita experiência pra caber com folga, priorize entregar TODOS os campos preenchidos de forma mais concisa (menos bullets por cargo) em vez de deixar o JSON incompleto ou cortado — o JSON precisa sempre fechar corretamente.
 Responda APENAS com JSON válido, compacto, sem markdown, sem comentários, neste formato exato:
 {"name":"...", "title":"...", "contact":"...", "summary":"...", "experience":[{"role":"...","company":"...","period":"...","bullets":["...","..."]}], "education":[{"degree":"...","institution":"...","period":"..."}], "skills":["...","..."]}`;
-    const { text: raw } = await callClaude({ system, content: finalPrompt, maxTokens: 3000 });
+    const { text: raw } = await callClaude({ system, content: finalPrompt, maxTokens: 4500 });
     let clean = raw.replace(/```json|```/g, '').trim();
     // se vier algum texto extra antes/depois do JSON, recorta só o objeto
     const firstBrace = clean.indexOf('{');
