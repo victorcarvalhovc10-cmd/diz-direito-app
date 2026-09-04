@@ -38,28 +38,35 @@ function checkAndConsumeQuota(deviceId) {
 }
 
 // --- helper pra chamar a API da Anthropic ---
-async function callClaude({ system, content, maxTokens = 1400, messages = null }) {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: maxTokens,
-      system,
-      messages: messages || [{ role: 'user', content }]
-    })
-  });
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Anthropic API error ${response.status}: ${errText}`);
+async function callClaude({ system, content, maxTokens = 1400, messages = null, timeoutMs = 28000 }) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: maxTokens,
+        system,
+        messages: messages || [{ role: 'user', content }]
+      }),
+      signal: controller.signal
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Anthropic API error ${response.status}: ${errText}`);
+    }
+    const data = await response.json();
+    const block = (data.content || []).find(b => b.type === 'text');
+    return { text: block ? block.text.trim() : '', stopReason: data.stop_reason };
+  } finally {
+    clearTimeout(timer);
   }
-  const data = await response.json();
-  const block = (data.content || []).find(b => b.type === 'text');
-  return { text: block ? block.text.trim() : '', stopReason: data.stop_reason };
 }
 
 // middleware simples de identificação do dispositivo (sem login)
@@ -185,38 +192,56 @@ Responda APENAS com o prompt final, texto puro, sem explicações, sem markdown,
 });
 
 app.post('/api/execute-text', async (req, res) => {
-  try {
-    const { finalPrompt } = req.body;
-    const system = `Responda ao pedido abaixo da melhor forma possível, com qualidade profissional, pronto para uso.
+  const { finalPrompt } = req.body;
+  const system = `Responda ao pedido abaixo da melhor forma possível, com qualidade profissional, pronto para uso.
 Antes de começar, avalie mentalmente se o conteúdo completo e ideal cabe com folga no espaço de resposta disponível. Se sim, escreva o quanto for necessário, sem resumir demais — pode escrever bastante se o pedido pedir algo extenso (ex: apostila, guia completo, material longo, petição, contrato).
 Se avaliar que o conteúdo ideal NÃO caberia por completo, priorize entregar uma versão mais condensada mas COMPLETA — nunca termine no meio de uma frase, de um argumento, de uma seção ou sem a conclusão/fechamento apropriado (ex: uma petição sem pedido final e fecho, um contrato sem assinatura, um texto sem conclusão). É sempre melhor um documento mais curto e inteiro do que um documento mais longo e cortado.`;
-    const messages = [{ role: 'user', content: finalPrompt }];
-    let fullText = '';
-    let stopReason = null;
-    const MAX_ROUNDS = 4;
-    const ROUND_MAX_TOKENS = 4500;
-    const TIME_BUDGET_MS = 46000; // fica com folga dentro do limite de 60s do Vercel
-    const startedAt = Date.now();
+  const messages = [{ role: 'user', content: finalPrompt }];
+  let fullText = '';
+  let stopReason = null;
+  const MAX_ROUNDS = 5;
+  const ROUND_MAX_TOKENS = 2200; // valor conservador — cada rodada precisa terminar com folga dentro dos 60s do Vercel
+  const ROUND_TIMEOUT_MS = 25000; // desiste de UMA rodada travada, sem derrubar a requisição inteira
+  const TIME_BUDGET_MS = 40000; // a partir daqui, para de pedir continuação normal
+  const WRAP_UP_DEADLINE_MS = 48000; // depois disso, nem tenta mais fechar — usa o que tem
+  const startedAt = Date.now();
+  let didWrapUp = false;
 
-    for (let round = 0; round < MAX_ROUNDS; round++) {
-      if (Date.now() - startedAt > TIME_BUDGET_MS) {
-        stopReason = 'time_budget';
-        break;
-      }
-      const { text, stopReason: sr } = await callClaude({ system, messages, maxTokens: ROUND_MAX_TOKENS });
-      fullText += text;
-      stopReason = sr;
-      if (stopReason !== 'max_tokens') break;
-      // pede pra continuar exatamente de onde parou
-      messages.push({ role: 'assistant', content: text });
-      messages.push({ role: 'user', content: 'Continue exatamente de onde parou, sem repetir o que já foi escrito e sem reintroduzir o assunto. Se estiver perto do fim, conclua o documento de forma completa e apropriada.' });
+  const CONTINUE_PROMPT = 'Continue exatamente de onde parou, sem repetir o que já foi escrito e sem reintroduzir o assunto. Se estiver perto do fim, conclua o documento de forma completa e apropriada.';
+  const WRAP_UP_PROMPT = 'O tempo está acabando. Pare por aqui e conclua AGORA: se não deu tempo de terminar todo o conteúdo planejado, resuma rapidamente o que faltaria em poucas linhas e finalize o documento de forma completa e apropriada (com fechamento/conclusão de verdade). Seja direto, sem continuar detalhando como antes.';
+
+  for (let round = 0; round < MAX_ROUNDS; round++) {
+    const elapsed = Date.now() - startedAt;
+    if (elapsed > WRAP_UP_DEADLINE_MS) break; // sem tempo nem pra fechar — usa o que já tem
+
+    let isWrapUp = false;
+    if (round > 0) {
+      // decide a instrução desta rodada de continuação, com base no tempo restante
+      const outOfNormalTime = elapsed > TIME_BUDGET_MS;
+      if (outOfNormalTime && didWrapUp) break; // já tentou fechar — encerra com o que tem
+      isWrapUp = outOfNormalTime && !didWrapUp;
+      messages.push({ role: 'user', content: isWrapUp ? WRAP_UP_PROMPT : CONTINUE_PROMPT });
+      if (isWrapUp) didWrapUp = true;
     }
 
-    res.json({ result: fullText, truncated: stopReason === 'max_tokens' || stopReason === 'time_budget' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'erro_interno', message: 'Não consegui gerar o resultado. Tenta de novo.' });
+    try {
+      const roundMaxTokens = isWrapUp ? 900 : ROUND_MAX_TOKENS;
+      const { text, stopReason: sr } = await callClaude({ system, messages, maxTokens: roundMaxTokens, timeoutMs: ROUND_TIMEOUT_MS });
+      fullText += text;
+      stopReason = sr;
+      if (isWrapUp) break; // depois de fechar, não continua de jeito nenhum
+      if (stopReason !== 'max_tokens') break; // terminou naturalmente
+      messages.push({ role: 'assistant', content: text });
+    } catch (roundErr) {
+      console.error('Rodada falhou ou expirou:', roundErr.message);
+      break; // aproveita o que já foi gerado nas rodadas anteriores, se houver
+    }
   }
+
+  if (!fullText) {
+    return res.status(500).json({ error: 'erro_interno', message: 'Não consegui gerar o resultado. Tenta de novo.' });
+  }
+  res.json({ result: fullText, truncated: stopReason === 'max_tokens' || stopReason === 'time_budget' });
 });
 
 app.get('/api/image-provider', (req, res) => {
@@ -275,7 +300,7 @@ IMPORTANTE: todo texto deve ser puro, sem markdown (sem **negrito**, sem # títu
 Gere entre 6 e 10 slides, dependendo da complexidade do pedido. Seja conciso em cada bullet (máximo uma frase curta).
 Responda APENAS com JSON válido, compacto, sem markdown, sem comentários, neste formato exato:
 {"title": "título da apresentação", "slides": [{"title": "título do slide", "bullets": ["ponto 1", "ponto 2"], "notes": "observações do apresentador, opcional"}]}`;
-    const { text: raw } = await callClaude({ system, content: finalPrompt, maxTokens: 6000 });
+    const { text: raw } = await callClaude({ system, content: finalPrompt, maxTokens: 3500, timeoutMs: 25000 });
     let clean = raw.replace(/```json|```/g, '').trim();
     const firstBrace = clean.indexOf('{');
     const lastBrace = clean.lastIndexOf('}');
