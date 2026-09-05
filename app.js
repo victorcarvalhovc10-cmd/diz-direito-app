@@ -199,11 +199,11 @@ Se avaliar que o conteúdo ideal NÃO caberia por completo, priorize entregar um
   const messages = [{ role: 'user', content: finalPrompt }];
   let fullText = '';
   let stopReason = null;
-  const MAX_ROUNDS = 5;
-  const ROUND_MAX_TOKENS = 2200; // valor conservador — cada rodada precisa terminar com folga dentro dos 60s do Vercel
-  const ROUND_TIMEOUT_MS = 25000; // desiste de UMA rodada travada, sem derrubar a requisição inteira
-  const TIME_BUDGET_MS = 40000; // a partir daqui, para de pedir continuação normal
-  const WRAP_UP_DEADLINE_MS = 48000; // depois disso, nem tenta mais fechar — usa o que tem
+  const MAX_ROUNDS = 8;
+  const ROUND_MAX_TOKENS = 1200; // menor = termina bem mais rápido, com folga confortável de tempo
+  const ROUND_TIMEOUT_MS = 40000; // generoso o suficiente pra não cortar geração normal, ainda protege contra travamento de verdade
+  const TIME_BUDGET_MS = 42000; // a partir daqui, para de pedir continuação normal
+  const WRAP_UP_DEADLINE_MS = 50000; // depois disso, nem tenta mais fechar — usa o que tem
   const startedAt = Date.now();
   let didWrapUp = false;
 
@@ -300,7 +300,7 @@ IMPORTANTE: todo texto deve ser puro, sem markdown (sem **negrito**, sem # títu
 Gere entre 6 e 10 slides, dependendo da complexidade do pedido. Seja conciso em cada bullet (máximo uma frase curta).
 Responda APENAS com JSON válido, compacto, sem markdown, sem comentários, neste formato exato:
 {"title": "título da apresentação", "slides": [{"title": "título do slide", "bullets": ["ponto 1", "ponto 2"], "notes": "observações do apresentador, opcional"}]}`;
-    const { text: raw } = await callClaude({ system, content: finalPrompt, maxTokens: 3500, timeoutMs: 25000 });
+    const { text: raw } = await callClaude({ system, content: finalPrompt, maxTokens: 3000, timeoutMs: 45000 });
     let clean = raw.replace(/```json|```/g, '').trim();
     const firstBrace = clean.indexOf('{');
     const lastBrace = clean.lastIndexOf('}');
@@ -336,7 +336,7 @@ IMPORTANTE: o VALOR de cada campo deve ser texto puro, sem markdown — nunca us
 Se houver muita experiência pra caber com folga, priorize entregar TODOS os campos preenchidos de forma mais concisa (menos bullets por cargo) em vez de deixar o JSON incompleto ou cortado — o JSON precisa sempre fechar corretamente.
 Responda APENAS com JSON válido, compacto, sem markdown, sem comentários, neste formato exato:
 {"name":"...", "title":"...", "contact":"...", "summary":"...", "experience":[{"role":"...","company":"...","period":"...","bullets":["...","..."]}], "education":[{"degree":"...","institution":"...","period":"..."}], "skills":["...","..."]}`;
-    const { text: raw } = await callClaude({ system, content: finalPrompt, maxTokens: 4500 });
+    const { text: raw } = await callClaude({ system, content: finalPrompt, maxTokens: 3000, timeoutMs: 45000 });
     let clean = raw.replace(/```json|```/g, '').trim();
     // se vier algum texto extra antes/depois do JSON, recorta só o objeto
     const firstBrace = clean.indexOf('{');
