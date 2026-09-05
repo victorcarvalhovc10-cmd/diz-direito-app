@@ -202,8 +202,8 @@ Se avaliar que o conteúdo ideal NÃO caberia por completo, priorize entregar um
   const MAX_ROUNDS = 8;
   const ROUND_MAX_TOKENS = 1200; // menor = termina bem mais rápido, com folga confortável de tempo
   const ROUND_TIMEOUT_MS = 40000; // generoso o suficiente pra não cortar geração normal, ainda protege contra travamento de verdade
-  const TIME_BUDGET_MS = 42000; // a partir daqui, para de pedir continuação normal
-  const WRAP_UP_DEADLINE_MS = 50000; // depois disso, nem tenta mais fechar — usa o que tem
+  const TIME_BUDGET_MS = 38000; // a partir daqui, para de pedir continuação normal
+  const WRAP_UP_DEADLINE_MS = 46000; // depois disso, nem tenta mais fechar no laço principal — sobra pra rede de segurança abaixo
   const startedAt = Date.now();
   let didWrapUp = false;
 
@@ -241,7 +241,23 @@ Se avaliar que o conteúdo ideal NÃO caberia por completo, priorize entregar um
   if (!fullText) {
     return res.status(500).json({ error: 'erro_interno', message: 'Não consegui gerar o resultado. Tenta de novo.' });
   }
-  res.json({ result: fullText, truncated: stopReason === 'max_tokens' || stopReason === 'time_budget' });
+
+  // rede de segurança: se saiu do laço com conteúdo ainda incompleto (por qualquer motivo —
+  // acabaram as rodadas, deu erro numa rodada, etc) e ainda não fechou, tenta fechar agora,
+  // desde que ainda dê tempo dentro do prazo do Vercel. A conversa em `messages` já está
+  // corretamente alinhada até a última rodada bem-sucedida — só falta pedir o fechamento.
+  if (stopReason === 'max_tokens' && !didWrapUp && (Date.now() - startedAt) < 52000) {
+    try {
+      messages.push({ role: 'user', content: WRAP_UP_PROMPT });
+      const { text } = await callClaude({ system, messages, maxTokens: 700, timeoutMs: 8000 });
+      fullText += text;
+      stopReason = 'closed';
+    } catch (e) {
+      console.error('Fechamento de segurança falhou:', e.message);
+    }
+  }
+
+  res.json({ result: fullText, truncated: stopReason === 'max_tokens' });
 });
 
 app.get('/api/image-provider', (req, res) => {
